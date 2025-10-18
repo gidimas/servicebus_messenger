@@ -1,0 +1,371 @@
+.list-view {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.list-header h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  color: #1f2937;
+}
+
+.list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.list-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: all 0.2s;
+  border: 1px solid #e5e7eb;
+}
+
+.list-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.card-header {
+  padding: 1.25rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.expand-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 0.375rem 0.625rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.2s;
+}
+
+.expand-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.card-body {
+  padding: 1.25rem;
+}
+
+.card-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.stat-value.dead-letter {
+  color: #ef4444;
+}
+
+.card-actions {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.subscriptions-list {
+  padding: 1rem 1.25rem;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+}
+
+.subscriptions-list h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.subscription-item {
+  padding: 0.75rem;
+  background: white;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+}
+
+.subscription-name {
+  font-weight: 500;
+  color: #374151;
+}
+
+.subscription-stats {
+  display: flex;
+  gap: 1rem;
+}
+
+.stat-small {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.no-subscriptions {
+  color: #9ca3af;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.empty-state,
+.loading-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Message History Styles */
+
+.message-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.message-history-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.message-history-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.message-header {
+  padding: 1rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.message-header:hover {
+  background: #f9fafb;
+}
+
+.message-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.message-destination {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 1rem;
+}
+
+.message-date {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.message-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.resend-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.resend-button:hover:not(:disabled) {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.resend-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.expand-icon {
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+.resend-success {
+  padding: 0.75rem 1.25rem;
+  background: #d1fae5;
+  border-top: 1px solid #a7f3d0;
+  color: #065f46;
+  font-size: 0.9rem;
+}
+
+.resend-error {
+  padding: 0.75rem 1.25rem;
+  background: #fee2e2;
+  border-top: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 0.9rem;
+}
+
+.message-details {
+  padding: 1.25rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.detail-section {
+  margin-bottom: 1rem;
+}
+
+.detail-section h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.message-body {
+  background: white;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+}
+
+.detail-row {
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.detail-row strong {
+  color: #1f2937;
+  margin-right: 0.5rem;
+}
+
+.properties-table {
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.property-row-display {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.property-row-display:last-child {
+  border-bottom: none;
+}
+
+.property-key {
+  font-weight: 600;
+  color: #374151;
+}
+
+.property-value {
+  color: #6b7280;
+}
+
+.button-danger {
+  padding: 0.625rem 1.5rem;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.button-danger:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
