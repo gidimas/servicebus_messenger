@@ -1,13 +1,26 @@
 {
   "name": "servicebus_messenger",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "1.0.0",
+  "main": "electron.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node copy-run.js",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron": "npm run build && electron .",
+    "package-win": "tsc -b && vite build && node copy-run.js && electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.servicebus.messenger",
+    "productName": "Azure Service Bus Messenger",
+    "files": [
+      "dist/**/*",
+      "electron.js"
+    ],
+    "win": {
+      "target": "portable"
+    }
   },
   "dependencies": {
     "@types/crypto-js": "^4.2.2",
@@ -21,6 +34,8 @@
     "@types/react": "^19.1.16",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.4",
+    "electron": "^38.3.0",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.36.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.22",
