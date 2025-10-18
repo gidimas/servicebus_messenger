@@ -1,0 +1,92 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Get version from package.json
+        id: package-version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Check if release already exists
+        id: check-release
+        run: |
+          if gh release view v${{ steps.package-version.outputs.version }} > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create release zip
+        if: steps.check-release.outputs.exists == 'false'
+        run: |
+          cd dist
+          zip -r ../azure-servicebus-messenger-v${{ steps.package-version.outputs.version }}.zip .
+          cd ..
+
+      - name: Generate release notes
+        if: steps.check-release.outputs.exists == 'false'
+        id: release-notes
+        run: |
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "## Azure Service Bus Messenger v${{ steps.package-version.outputs.version }}" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### What's Included" >> $GITHUB_OUTPUT
+          echo "- Web application files (HTML, CSS, JS)" >> $GITHUB_OUTPUT
+          echo "- PowerShell launcher script (run.ps1)" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### How to Use" >> $GITHUB_OUTPUT
+          echo "1. Download and extract the zip file" >> $GITHUB_OUTPUT
+          echo "2. Right-click \`run.ps1\` and select \"Run with PowerShell\"" >> $GITHUB_OUTPUT
+          echo "3. If Node.js is not installed, the script will offer to install it automatically" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### Requirements" >> $GITHUB_OUTPUT
+          echo "- Windows 10/11" >> $GITHUB_OUTPUT
+          echo "- Node.js (will be installed automatically if missing)" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### Latest Changes" >> $GITHUB_OUTPUT
+          echo "\`\`\`" >> $GITHUB_OUTPUT
+          git log -1 --pretty=format:"%s" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "\`\`\`" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        if: steps.check-release.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.package-version.outputs.version }}
+          name: Azure Service Bus Messenger v${{ steps.package-version.outputs.version }}
+          body: ${{ steps.release-notes.outputs.notes }}
+          files: azure-servicebus-messenger-v${{ steps.package-version.outputs.version }}.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
