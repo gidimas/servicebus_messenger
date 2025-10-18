@@ -82,6 +82,27 @@ export function useConnections() {
     return newConnection;
   }, []);
 
+  const updateConnection = useCallback((id: string, connectionString: string, name: string) => {
+    const parsed = parseConnectionString(connectionString);
+
+    if (!parsed) {
+      throw new Error('Invalid connection string format');
+    }
+
+    const updatedConnection: ConnectionString = {
+      id,
+      name,
+      ...parsed,
+    };
+
+    StorageManager.saveConnection(updatedConnection);
+    setConnections(prev => prev.map(c => c.id === id ? updatedConnection : c));
+
+    if (selectedConnection?.id === id) {
+      setSelectedConnection(updatedConnection);
+    }
+  }, [selectedConnection]);
+
   const deleteConnection = useCallback((id: string) => {
     StorageManager.deleteConnection(id);
     setConnections(prev => prev.filter(c => c.id !== id));
@@ -117,6 +138,7 @@ export function useConnections() {
     isTestingConnection,
     isLoaded,
     addConnection,
+    updateConnection,
     deleteConnection,
     selectConnection,
     testConnection,

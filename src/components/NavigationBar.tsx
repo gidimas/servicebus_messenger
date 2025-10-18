@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ConnectionString, ConnectionStatus } from '../types';
+import { ConfirmModal } from './ConfirmModal';
 import './NavigationBar.css';
 
 interface NavigationBarProps {
@@ -8,6 +9,9 @@ interface NavigationBarProps {
   connectionStatus: ConnectionStatus;
   onSelectConnection: (id: string) => void;
   onAddConnection: () => void;
+  onImportConnection: () => void;
+  onEditConnection: (connection: ConnectionString) => void;
+  onDeleteConnection: (id: string) => void;
   onNavigate: (view: 'queues' | 'topics' | 'history') => void;
   currentView: 'queues' | 'topics' | 'history';
 }
@@ -18,12 +22,28 @@ export const NavigationBar: React.FC<NavigationBarProps> = ({
   connectionStatus,
   onSelectConnection,
   onAddConnection,
+  onImportConnection,
+  onEditConnection,
+  onDeleteConnection,
   onNavigate,
   currentView,
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<ConnectionString | null>(null);
+
+  const handleDeleteClick = (connection: ConnectionString) => {
+    setConfirmDelete(connection);
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmDelete) {
+      onDeleteConnection(confirmDelete.id);
+      setConfirmDelete(null);
+    }
+  };
 
   return (
+    <>
     <nav className="navigation-bar">
       <div className="nav-left">
         <h1 className="nav-title">Azure Service Bus Messenger</h1>
@@ -72,16 +92,43 @@ export const NavigationBar: React.FC<NavigationBarProps> = ({
                   <div className="dropdown-item disabled">No connections saved</div>
                 ) : (
                   connections.map(conn => (
-                    <button
+                    <div
                       key={conn.id}
-                      className={`dropdown-item ${selectedConnection?.id === conn.id ? 'selected' : ''}`}
-                      onClick={() => {
-                        onSelectConnection(conn.id);
-                        setShowDropdown(false);
-                      }}
+                      className={`dropdown-item-wrapper ${selectedConnection?.id === conn.id ? 'selected' : ''}`}
                     >
-                      {conn.name}
-                    </button>
+                      <button
+                        className="dropdown-item-main"
+                        onClick={() => {
+                          onSelectConnection(conn.id);
+                          setShowDropdown(false);
+                        }}
+                      >
+                        {conn.name}
+                      </button>
+                      <div className="dropdown-item-actions">
+                        <button
+                          className="icon-button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditConnection(conn);
+                            setShowDropdown(false);
+                          }}
+                          title="Edit connection"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          className="icon-button delete"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(conn);
+                          }}
+                          title="Delete connection"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
                   ))
                 )}
                 <div className="dropdown-divider" />
@@ -94,11 +141,31 @@ export const NavigationBar: React.FC<NavigationBarProps> = ({
                 >
                   + Add Connection
                 </button>
+                <button
+                  className="dropdown-item add-button"
+                  onClick={() => {
+                    onImportConnection();
+                    setShowDropdown(false);
+                  }}
+                >
+                  📥 Import Connection
+                </button>
               </div>
             )}
           </div>
         </div>
       </div>
     </nav>
+
+    <ConfirmModal
+      isOpen={!!confirmDelete}
+      title="Delete Connection"
+      message={`Are you sure you want to delete the connection "${confirmDelete?.name}"? This action cannot be undone.`}
+      confirmText="Delete"
+      cancelText="Cancel"
+      onConfirm={handleConfirmDelete}
+      onCancel={() => setConfirmDelete(null)}
+    />
+    </>
   );
 };
