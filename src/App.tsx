@@ -17,6 +17,7 @@ function App() {
     connections,
     selectedConnection,
     connectionStatus,
+    isLoaded,
     addConnection,
     selectConnection,
     getAPI,
@@ -24,10 +25,10 @@ function App() {
 
   // Show connection modal on first load if no connections exist
   useEffect(() => {
-    if (connections.length === 0) {
+    if (isLoaded && connections.length === 0) {
       setIsConnectionModalOpen(true);
     }
-  }, [connections.length]);
+  }, [isLoaded, connections.length]);
 
   const handleAddConnection = (connectionString: string, name: string) => {
     const newConnection = addConnection(connectionString, name);

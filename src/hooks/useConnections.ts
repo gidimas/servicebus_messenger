@@ -12,6 +12,7 @@ export function useConnections() {
     lastChecked: 0,
   });
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Load connections from storage on mount
   useEffect(() => {
@@ -25,6 +26,8 @@ export function useConnections() {
         setSelectedConnection(selected);
       }
     }
+
+    setIsLoaded(true);
   }, []);
 
   // Test connection when selected connection changes
@@ -112,6 +115,7 @@ export function useConnections() {
     selectedConnection,
     connectionStatus,
     isTestingConnection,
+    isLoaded,
     addConnection,
     deleteConnection,
     selectConnection,
