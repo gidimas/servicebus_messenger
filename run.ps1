@@ -146,9 +146,21 @@ for ($i = 0; $i -lt $maxAttempts; $i++) {
 }
 
 Write-Host "Server will run on http://localhost:$port" -ForegroundColor Yellow
+Write-Host "Proxy will run on http://localhost:3001" -ForegroundColor Yellow
 Write-Host ""
 
-# Start the server in background
+# Start the proxy server in background
+Write-Host "Starting proxy server..." -ForegroundColor Yellow
+$proxyJob = Start-Job -ScriptBlock {
+    Set-Location $using:PWD
+    node proxy-server.js
+}
+
+# Wait a moment for proxy to start
+Start-Sleep -Seconds 2
+
+# Start the web server in background
+Write-Host "Starting web server..." -ForegroundColor Yellow
 $serverJob = Start-Job -ScriptBlock {
     param($portNum)
     Set-Location $using:PWD
@@ -162,14 +174,28 @@ Start-Sleep -Seconds 3
 Write-Host "Opening browser..." -ForegroundColor Yellow
 Start-Process "http://localhost:$port"
 
-# Wait for the job to complete (or Ctrl+C)
+# Wait for the jobs to complete (or Ctrl+C)
 try {
-    Receive-Job -Job $serverJob -Wait
+    # Monitor both jobs
+    while ($true) {
+        Start-Sleep -Seconds 1
+
+        # Check if either job failed
+        if ($proxyJob.State -eq 'Failed') {
+            throw "Proxy server failed"
+        }
+        if ($serverJob.State -eq 'Failed') {
+            throw "Web server failed"
+        }
+    }
 }
 catch {
     Show-MessageBox -Message "Failed to start server.`n`nError: $_" -Title "Error" -Icon Error
 }
 finally {
+    Write-Host "`nStopping servers..." -ForegroundColor Yellow
+    Stop-Job -Job $proxyJob -ErrorAction SilentlyContinue
+    Remove-Job -Job $proxyJob -ErrorAction SilentlyContinue
     Stop-Job -Job $serverJob -ErrorAction SilentlyContinue
     Remove-Job -Job $serverJob -ErrorAction SilentlyContinue
 }

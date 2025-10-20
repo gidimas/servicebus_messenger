@@ -5,11 +5,16 @@ export class ServiceBusAPI {
   private endpoint: string;
   private keyName: string;
   private keyValue: string;
+  private proxyUrl: string = 'http://localhost:3001';
 
   constructor(endpoint: string, keyName: string, keyValue: string) {
     this.endpoint = endpoint.replace('sb://', 'https://').replace(/\/$/, '');
     this.keyName = keyName;
     this.keyValue = keyValue;
+  }
+
+  private buildProxyUrl(targetUrl: string): string {
+    return `${this.proxyUrl}?url=${encodeURIComponent(targetUrl)}`;
   }
 
   private getAuthHeader(resourcePath?: string): string {
@@ -33,7 +38,8 @@ export class ServiceBusAPI {
 
   async testConnection(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.endpoint}/$Resources/Queues?api-version=2021-05`, {
+      const targetUrl = `${this.endpoint}/$Resources/Queues?api-version=2021-05`;
+      const response = await fetch(this.buildProxyUrl(targetUrl), {
         method: 'GET',
         headers: {
           'Authorization': this.getAuthHeader(),
@@ -50,7 +56,8 @@ export class ServiceBusAPI {
 
   async getQueues(): Promise<Queue[]> {
     try {
-      const response = await fetch(`${this.endpoint}/$Resources/Queues?api-version=2021-05`, {
+      const targetUrl = `${this.endpoint}/$Resources/Queues?api-version=2021-05`;
+      const response = await fetch(this.buildProxyUrl(targetUrl), {
         method: 'GET',
         headers: {
           'Authorization': this.getAuthHeader(),
@@ -72,7 +79,8 @@ export class ServiceBusAPI {
 
   async getTopics(): Promise<Topic[]> {
     try {
-      const response = await fetch(`${this.endpoint}/$Resources/Topics?api-version=2021-05`, {
+      const targetUrl = `${this.endpoint}/$Resources/Topics?api-version=2021-05`;
+      const response = await fetch(this.buildProxyUrl(targetUrl), {
         method: 'GET',
         headers: {
           'Authorization': this.getAuthHeader(),
@@ -94,8 +102,9 @@ export class ServiceBusAPI {
 
   async getSubscriptions(topicName: string): Promise<Subscription[]> {
     try {
+      const targetUrl = `${this.endpoint}/${topicName}/Subscriptions?api-version=2021-05`;
       const response = await fetch(
-        `${this.endpoint}/${topicName}/Subscriptions?api-version=2021-05`,
+        this.buildProxyUrl(targetUrl),
         {
           method: 'GET',
           headers: {
@@ -153,8 +162,9 @@ export class ServiceBusAPI {
         });
       }
 
+      const targetUrl = `${this.endpoint}/${queueName}/messages?api-version=2021-05`;
       const response = await fetch(
-        `${this.endpoint}/${queueName}/messages?api-version=2021-05`,
+        this.buildProxyUrl(targetUrl),
         {
           method: 'POST',
           headers,
@@ -208,8 +218,9 @@ export class ServiceBusAPI {
         });
       }
 
+      const targetUrl = `${this.endpoint}/${topicName}/messages?api-version=2021-05`;
       const response = await fetch(
-        `${this.endpoint}/${topicName}/messages?api-version=2021-05`,
+        this.buildProxyUrl(targetUrl),
         {
           method: 'POST',
           headers,
@@ -237,8 +248,9 @@ export class ServiceBusAPI {
         ? `${queueOrTopicName}/Subscriptions/${subscriptionName}/$DeadLetterQueue`
         : `${queueOrTopicName}/$DeadLetterQueue`;
 
+      const targetUrl = `${this.endpoint}/${path}?api-version=2021-05`;
       const response = await fetch(
-        `${this.endpoint}/${path}?api-version=2021-05`,
+        this.buildProxyUrl(targetUrl),
         {
           method: 'POST',
           headers: {
