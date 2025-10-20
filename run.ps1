@@ -149,6 +149,12 @@ Write-Host "Server will run on http://localhost:$port" -ForegroundColor Yellow
 Write-Host "Proxy will run on http://localhost:3001" -ForegroundColor Yellow
 Write-Host ""
 
+# Check if proxy-server.js exists
+if (-not (Test-Path "proxy-server.js")) {
+    Show-MessageBox -Message "Error: proxy-server.js not found!`n`nThis file is required for the application to work.`nPlease re-download the complete release package." -Title "Missing File" -Icon Error
+    exit
+}
+
 # Start the proxy server in background
 Write-Host "Starting proxy server..." -ForegroundColor Yellow
 $proxyJob = Start-Job -ScriptBlock {
@@ -156,8 +162,31 @@ $proxyJob = Start-Job -ScriptBlock {
     node proxy-server.js
 }
 
-# Wait a moment for proxy to start
+# Wait and verify proxy started
 Start-Sleep -Seconds 2
+
+# Check if proxy job failed to start
+if ($proxyJob.State -eq 'Failed') {
+    $proxyError = Receive-Job -Job $proxyJob 2>&1
+    Show-MessageBox -Message "Failed to start proxy server!`n`nError: $proxyError" -Title "Proxy Server Error" -Icon Error
+    Remove-Job -Job $proxyJob -ErrorAction SilentlyContinue
+    exit
+}
+
+# Verify proxy is actually listening on port 3001
+try {
+    $testConnection = Test-NetConnection -ComputerName localhost -Port 3001 -WarningAction SilentlyContinue -InformationLevel Quiet
+    if (-not $testConnection) {
+        throw "Proxy server is not responding on port 3001"
+    }
+    Write-Host "[OK] Proxy server started successfully" -ForegroundColor Green
+}
+catch {
+    Show-MessageBox -Message "Proxy server failed to start or is not listening on port 3001.`n`nPlease check if another application is using this port." -Title "Proxy Server Error" -Icon Error
+    Stop-Job -Job $proxyJob -ErrorAction SilentlyContinue
+    Remove-Job -Job $proxyJob -ErrorAction SilentlyContinue
+    exit
+}
 
 # Start the web server in background
 Write-Host "Starting web server..." -ForegroundColor Yellow
@@ -169,6 +198,18 @@ $serverJob = Start-Job -ScriptBlock {
 
 # Wait a moment for server to start
 Start-Sleep -Seconds 3
+
+# Check if web server job failed to start
+if ($serverJob.State -eq 'Failed') {
+    $serverError = Receive-Job -Job $serverJob 2>&1
+    Show-MessageBox -Message "Failed to start web server!`n`nError: $serverError" -Title "Web Server Error" -Icon Error
+    Stop-Job -Job $proxyJob -ErrorAction SilentlyContinue
+    Remove-Job -Job $proxyJob -ErrorAction SilentlyContinue
+    Remove-Job -Job $serverJob -ErrorAction SilentlyContinue
+    exit
+}
+
+Write-Host "[OK] Web server started successfully" -ForegroundColor Green
 
 # Now open the browser
 Write-Host "Opening browser..." -ForegroundColor Yellow
