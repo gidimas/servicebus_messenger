@@ -370,6 +370,7 @@ export class ServiceBusAPI {
 
         let messageCount: number | undefined;
         let deadLetterCount: number | undefined;
+        let correlationFilter: string | undefined;
 
         if (subscriptionDescription) {
           const messageCountNode = subscriptionDescription.getElementsByTagName('MessageCount')[0];
@@ -385,12 +386,24 @@ export class ServiceBusAPI {
               deadLetterCount = parseInt(deadLetterNode.textContent || '0');
             }
           }
+
+          // Try to extract correlation filter from CorrelationFilter element
+          const correlationFilterNode = subscriptionDescription.getElementsByTagName('CorrelationFilter')[0];
+          if (correlationFilterNode) {
+            // Try different possible tag names for the label/subject
+            const labelNode = correlationFilterNode.getElementsByTagName('Label')[0] ||
+                             correlationFilterNode.getElementsByTagName('d2p1:Label')[0];
+            if (labelNode && labelNode.textContent) {
+              correlationFilter = labelNode.textContent;
+            }
+          }
         }
 
         subscriptions.push({
           name: title,
           messageCount,
           deadLetterMessageCount: deadLetterCount,
+          correlationFilter,
         });
       }
     }

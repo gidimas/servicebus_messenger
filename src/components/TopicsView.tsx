@@ -15,6 +15,8 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
   const [error, setError] = useState<string | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSubscription, setSelectedSubscription] = useState<{ topicName: string; subscription: any } | null>(null);
 
   useEffect(() => {
     if (api) {
@@ -75,10 +77,13 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
     properties: any[],
     messageProps: any
   ) => {
-    if (!api || !selectedTopic) return;
+    if (!api) return;
+
+    const topicName = selectedTopic?.name || selectedSubscription?.topicName;
+    if (!topicName) return;
 
     await api.sendMessageToTopic(
-      selectedTopic.name,
+      topicName,
       body,
       properties,
       messageProps
@@ -94,9 +99,15 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
       correlationId: messageProps.correlationId,
       messageId: messageProps.messageId,
       sentAt: Date.now(),
-      destination: selectedTopic.name,
+      destination: topicName,
       destinationType: 'topic',
+      subscriptionName: selectedSubscription?.subscription.name,
     });
+  };
+
+  const handleCloseModal = () => {
+    setSelectedTopic(null);
+    setSelectedSubscription(null);
   };
 
   if (!api) {
@@ -146,17 +157,31 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
     );
   }
 
+  const filteredTopics = topics.filter(topic =>
+    topic.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="list-view">
       <div className="list-header">
-        <h2>Topics ({topics.length})</h2>
+        <h2>Topics ({filteredTopics.length})</h2>
         <button className="button-secondary" onClick={loadTopics}>
           Refresh
         </button>
       </div>
 
+      <div className="search-container">
+        <input
+          type="text"
+          placeholder="Search topics..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="search-input"
+        />
+      </div>
+
       <div className="list-grid">
-        {topics.map((topic) => (
+        {filteredTopics.map((topic) => (
           <div key={topic.name} className="list-card">
             <div className="card-header">
               <h3>{topic.name}</h3>
@@ -176,15 +201,26 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
                 ) : (
                   topic.subscriptions.map((sub) => (
                     <div key={sub.name} className="subscription-item">
-                      <span className="subscription-name">{sub.name}</span>
-                      <div className="subscription-stats">
-                        <span className="stat-small">
-                          Msgs: {sub.messageCount ?? '—'}
-                        </span>
-                        <span className="stat-small dead-letter">
-                          DLQ: {sub.deadLetterMessageCount ?? '—'}
-                        </span>
+                      <div className="subscription-content">
+                        <span className="subscription-name">{sub.name}</span>
+                        <div className="subscription-stats">
+                          <span className="stat-small">
+                            Msgs: {sub.messageCount ?? '—'}
+                          </span>
+                          <span className="stat-small dead-letter">
+                            DLQ: {sub.deadLetterMessageCount ?? '—'}
+                          </span>
+                        </div>
                       </div>
+                      {sub.correlationFilter && (
+                        <button
+                          className="subscription-send-btn"
+                          onClick={() => setSelectedSubscription({ topicName: topic.name, subscription: sub })}
+                          title={`Send message with subject: ${sub.correlationFilter}`}
+                        >
+                          ✉️
+                        </button>
+                      )}
                     </div>
                   ))
                 )}
@@ -203,13 +239,14 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
         ))}
       </div>
 
-      {selectedTopic && (
+      {(selectedTopic || selectedSubscription) && (
         <MessageModal
-          isOpen={!!selectedTopic}
-          onClose={() => setSelectedTopic(null)}
+          isOpen={!!(selectedTopic || selectedSubscription)}
+          onClose={handleCloseModal}
           onSend={handleSendMessage}
           destinationType="topic"
-          destinationName={selectedTopic.name}
+          destinationName={selectedTopic?.name || selectedSubscription?.topicName || ''}
+          correlationFilter={selectedSubscription?.subscription.correlationFilter}
         />
       )}
     </div>

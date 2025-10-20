@@ -17,6 +17,25 @@
   color: #1f2937;
 }
 
+.search-container {
+  margin-bottom: 1.5rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #0078d4;
+  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+}
+
 .list-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -130,6 +149,14 @@
   justify-content: space-between;
   align-items: center;
   border: 1px solid #e5e7eb;
+  gap: 0.75rem;
+}
+
+.subscription-content {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .subscription-name {
@@ -140,6 +167,27 @@
 .subscription-stats {
   display: flex;
   gap: 1rem;
+}
+
+.subscription-send-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.125rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.subscription-send-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 .stat-small {

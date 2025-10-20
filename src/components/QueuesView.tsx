@@ -14,6 +14,7 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedQueue, setSelectedQueue] = useState<Queue | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (api) {
@@ -113,17 +114,31 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
     );
   }
 
+  const filteredQueues = queues.filter(queue =>
+    queue.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="list-view">
       <div className="list-header">
-        <h2>Queues ({queues.length})</h2>
+        <h2>Queues ({filteredQueues.length})</h2>
         <button className="button-secondary" onClick={loadQueues}>
           Refresh
         </button>
       </div>
 
+      <div className="search-container">
+        <input
+          type="text"
+          placeholder="Search queues..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="search-input"
+        />
+      </div>
+
       <div className="list-grid">
-        {queues.map((queue) => (
+        {filteredQueues.map((queue) => (
           <div key={queue.name} className="list-card">
             <div className="card-header">
               <h3>{queue.name}</h3>
