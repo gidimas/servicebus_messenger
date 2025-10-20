@@ -162,6 +162,9 @@
 .subscription-name {
   font-weight: 500;
   color: #374151;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .subscription-stats {
@@ -193,6 +196,11 @@
 .stat-small {
   font-size: 0.875rem;
   color: #6b7280;
+}
+
+.stat-small.dead-letter {
+  color: #ef4444;
+  font-weight: 600;
 }
 
 .no-subscriptions {

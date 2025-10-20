@@ -126,6 +126,56 @@ export class ServiceBusAPI {
     }
   }
 
+  async getSubscriptionCorrelationFilter(topicName: string, subscriptionName: string): Promise<string | undefined> {
+    try {
+      const targetUrl = `${this.endpoint}/${topicName}/Subscriptions/${subscriptionName}/Rules?api-version=2021-05`;
+      const response = await fetch(
+        this.buildProxyUrl(targetUrl),
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': this.getAuthHeader(`${topicName}/Subscriptions/${subscriptionName}/Rules`),
+            'Content-Type': 'application/atom+xml;type=feed;charset=utf-8',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        return undefined;
+      }
+
+      const text = await response.text();
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(text, 'text/xml');
+
+      // Look for CorrelationFilter with Label property
+      const entries = xmlDoc.getElementsByTagName('entry');
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        const content = entry.getElementsByTagName('content')[0];
+        const ruleDescription = content?.getElementsByTagName('RuleDescription')[0];
+
+        if (ruleDescription) {
+          const filter = ruleDescription.getElementsByTagName('Filter')[0];
+          if (filter) {
+            // Try to find Label in CorrelationFilter
+            const labelElements = filter.getElementsByTagName('Label');
+            for (let j = 0; j < labelElements.length; j++) {
+              const label = labelElements[j].textContent?.trim();
+              if (label) {
+                return label;
+              }
+            }
+          }
+        }
+      }
+
+      return undefined;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
   async sendMessageToQueue(
     queueName: string,
     body: string,
@@ -370,31 +420,27 @@ export class ServiceBusAPI {
 
         let messageCount: number | undefined;
         let deadLetterCount: number | undefined;
-        let correlationFilter: string | undefined;
 
         if (subscriptionDescription) {
-          const messageCountNode = subscriptionDescription.getElementsByTagName('MessageCount')[0];
-          const countDetails = subscriptionDescription.getElementsByTagName('CountDetails')[0];
+          // Get all elements and search by tag name (ignoring namespaces)
+          const allElements = subscriptionDescription.getElementsByTagName('*');
 
-          if (messageCountNode) {
-            messageCount = parseInt(messageCountNode.textContent || '0');
-          }
+          for (let j = 0; j < allElements.length; j++) {
+            const element = allElements[j];
+            const tagName = element.tagName.split(':').pop(); // Remove namespace prefix
 
-          if (countDetails) {
-            const deadLetterNode = countDetails.getElementsByTagName('DeadLetterMessageCount')[0];
-            if (deadLetterNode) {
-              deadLetterCount = parseInt(deadLetterNode.textContent || '0');
+            if (tagName === 'MessageCount' && !messageCount) {
+              const count = parseInt(element.textContent || '0');
+              if (!isNaN(count)) {
+                messageCount = count;
+              }
             }
-          }
 
-          // Try to extract correlation filter from CorrelationFilter element
-          const correlationFilterNode = subscriptionDescription.getElementsByTagName('CorrelationFilter')[0];
-          if (correlationFilterNode) {
-            // Try different possible tag names for the label/subject
-            const labelNode = correlationFilterNode.getElementsByTagName('Label')[0] ||
-                             correlationFilterNode.getElementsByTagName('d2p1:Label')[0];
-            if (labelNode && labelNode.textContent) {
-              correlationFilter = labelNode.textContent;
+            if (tagName === 'DeadLetterMessageCount') {
+              const count = parseInt(element.textContent || '0');
+              if (!isNaN(count)) {
+                deadLetterCount = count;
+              }
             }
           }
         }
@@ -403,7 +449,6 @@ export class ServiceBusAPI {
           name: title,
           messageCount,
           deadLetterMessageCount: deadLetterCount,
-          correlationFilter,
         });
       }
     }

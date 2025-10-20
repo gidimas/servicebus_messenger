@@ -16,7 +16,8 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSubscription, setSelectedSubscription] = useState<{ topicName: string; subscription: any } | null>(null);
+  const [selectedSubscription, setSelectedSubscription] = useState<{ topicName: string; subscription: any; correlationFilter?: string } | null>(null);
+  const [loadingCorrelationFilter, setLoadingCorrelationFilter] = useState(false);
 
   useEffect(() => {
     if (api) {
@@ -108,6 +109,36 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
   const handleCloseModal = () => {
     setSelectedTopic(null);
     setSelectedSubscription(null);
+  };
+
+  const handleSubscriptionSendClick = async (topicName: string, subscription: any) => {
+    if (!api) return;
+
+    setLoadingCorrelationFilter(true);
+    try {
+      const correlationFilter = await api.getSubscriptionCorrelationFilter(topicName, subscription.name);
+      setSelectedSubscription({ topicName, subscription, correlationFilter });
+    } catch (error) {
+      // If we can't get correlation filter, just open modal without it
+      setSelectedSubscription({ topicName, subscription });
+    } finally {
+      setLoadingCorrelationFilter(false);
+    }
+  };
+
+  const handleViewDLQ = async (topicName: string, subscriptionName: string) => {
+    if (!api) return;
+
+    try {
+      const messages = await api.getDeadLetterMessages(topicName, subscriptionName);
+      if (messages.length > 0) {
+        alert(`DLQ Messages:\n\n${JSON.stringify(messages, null, 2)}`);
+      } else {
+        alert('No dead letter messages found');
+      }
+    } catch (error) {
+      alert(`Failed to fetch DLQ messages: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   if (!api) {
@@ -207,20 +238,24 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
                           <span className="stat-small">
                             Msgs: {sub.messageCount ?? '—'}
                           </span>
-                          <span className="stat-small dead-letter">
+                          <span
+                            className="stat-small dead-letter clickable"
+                            onClick={() => sub.deadLetterMessageCount && sub.deadLetterMessageCount > 0 && handleViewDLQ(topic.name, sub.name)}
+                            title={sub.deadLetterMessageCount && sub.deadLetterMessageCount > 0 ? "Click to view DLQ messages" : undefined}
+                            style={{ cursor: sub.deadLetterMessageCount && sub.deadLetterMessageCount > 0 ? 'pointer' : 'default' }}
+                          >
                             DLQ: {sub.deadLetterMessageCount ?? '—'}
                           </span>
                         </div>
                       </div>
-                      {sub.correlationFilter && (
-                        <button
-                          className="subscription-send-btn"
-                          onClick={() => setSelectedSubscription({ topicName: topic.name, subscription: sub })}
-                          title={`Send message with subject: ${sub.correlationFilter}`}
-                        >
-                          ✉️
-                        </button>
-                      )}
+                      <button
+                        className="subscription-send-btn"
+                        onClick={() => handleSubscriptionSendClick(topic.name, sub)}
+                        disabled={loadingCorrelationFilter}
+                        title="Send message to topic"
+                      >
+                        ✉️
+                      </button>
                     </div>
                   ))
                 )}
@@ -246,7 +281,7 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
           onSend={handleSendMessage}
           destinationType="topic"
           destinationName={selectedTopic?.name || selectedSubscription?.topicName || ''}
-          correlationFilter={selectedSubscription?.subscription.correlationFilter}
+          correlationFilter={selectedSubscription?.correlationFilter}
         />
       )}
     </div>

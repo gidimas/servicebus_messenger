@@ -67,6 +67,21 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
     });
   };
 
+  const handleViewDLQ = async (queueName: string) => {
+    if (!api) return;
+
+    try {
+      const messages = await api.getDeadLetterMessages(queueName);
+      if (messages.length > 0) {
+        alert(`DLQ Messages:\n\n${JSON.stringify(messages, null, 2)}`);
+      } else {
+        alert('No dead letter messages found');
+      }
+    } catch (error) {
+      alert(`Failed to fetch DLQ messages: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   if (!api) {
     return (
       <div className="list-view">
@@ -151,7 +166,12 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
                 </div>
                 <div className="stat">
                   <span className="stat-label">Dead Letters</span>
-                  <span className="stat-value dead-letter">
+                  <span
+                    className="stat-value dead-letter"
+                    onClick={() => queue.deadLetterMessageCount && queue.deadLetterMessageCount > 0 && handleViewDLQ(queue.name)}
+                    title={queue.deadLetterMessageCount && queue.deadLetterMessageCount > 0 ? "Click to view DLQ messages" : undefined}
+                    style={{ cursor: queue.deadLetterMessageCount && queue.deadLetterMessageCount > 0 ? 'pointer' : 'default' }}
+                  >
                     {queue.deadLetterMessageCount ?? '—'}
                   </span>
                 </div>
