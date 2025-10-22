@@ -14,8 +14,6 @@ export interface SASToken {
 
 export interface Queue {
   name: string;
-  messageCount?: number;
-  deadLetterMessageCount?: number;
 }
 
 export interface Topic {
@@ -25,8 +23,6 @@ export interface Topic {
 
 export interface Subscription {
   name: string;
-  messageCount?: number;
-  deadLetterMessageCount?: number;
   correlationFilter?: string;
 }
 

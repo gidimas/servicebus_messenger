@@ -157,6 +157,8 @@ if (-not (Test-Path "proxy-server.js")) {
 
 # Start the proxy server in background
 Write-Host "Starting proxy server..." -ForegroundColor Yellow
+
+# Start proxy server as a job but redirect output to console
 $proxyJob = Start-Job -ScriptBlock {
     Set-Location $using:PWD
     node proxy-server.js
@@ -164,14 +166,6 @@ $proxyJob = Start-Job -ScriptBlock {
 
 # Wait and verify proxy started
 Start-Sleep -Seconds 2
-
-# Check if proxy job failed to start
-if ($proxyJob.State -eq 'Failed') {
-    $proxyError = Receive-Job -Job $proxyJob 2>&1
-    Show-MessageBox -Message "Failed to start proxy server!`n`nError: $proxyError" -Title "Proxy Server Error" -Icon Error
-    Remove-Job -Job $proxyJob -ErrorAction SilentlyContinue
-    exit
-}
 
 # Verify proxy is actually listening on port 3001
 try {
@@ -215,23 +209,42 @@ Write-Host "[OK] Web server started successfully" -ForegroundColor Green
 Write-Host "Opening browser..." -ForegroundColor Yellow
 Start-Process "http://localhost:$port"
 
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "  Servers are running!" -ForegroundColor Green
+Write-Host "  Proxy server logs will appear below" -ForegroundColor Yellow
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+
 # Wait for the jobs to complete (or Ctrl+C)
 try {
-    # Monitor both jobs
+    # Monitor both servers and display proxy logs
+    $lastProxyOutput = ""
     while ($true) {
-        Start-Sleep -Seconds 1
+        # Get and display proxy server output
+        $proxyOutput = Receive-Job -Job $proxyJob 2>&1 | Out-String
+        if ($proxyOutput -and $proxyOutput -ne $lastProxyOutput) {
+            Write-Host $proxyOutput.Trim() -ForegroundColor Cyan
+            $lastProxyOutput = $proxyOutput
+        }
 
-        # Check if either job failed
+        Start-Sleep -Milliseconds 500
+
+        # Check if proxy job failed
         if ($proxyJob.State -eq 'Failed') {
             throw "Proxy server failed"
         }
+
+        # Check if web server job failed
         if ($serverJob.State -eq 'Failed') {
             throw "Web server failed"
         }
     }
 }
 catch {
-    Show-MessageBox -Message "Failed to start server.`n`nError: $_" -Title "Error" -Icon Error
+    if ($_ -notmatch "terminate the pipeline") {
+        Write-Host "`n[ERROR] $_" -ForegroundColor Red
+    }
 }
 finally {
     Write-Host "`nStopping servers..." -ForegroundColor Yellow

@@ -23,10 +23,13 @@ const server = http.createServer((req, res) => {
   const targetUrl = urlParams.searchParams.get('url');
 
   if (!targetUrl) {
+    console.log('[ERROR] Missing url parameter');
     res.writeHead(400, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Missing url parameter' }));
     return;
   }
+
+  console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${targetUrl}`);
 
   try {
     const parsedUrl = new URL(targetUrl);
@@ -55,6 +58,8 @@ const server = http.createServer((req, res) => {
 
       // Make the proxied request
       const proxyReq = https.request(options, proxyRes => {
+        console.log(`[${new Date().toLocaleTimeString()}] Response: ${proxyRes.statusCode} ${proxyRes.statusMessage}`);
+
         // Copy response headers
         res.writeHead(proxyRes.statusCode, proxyRes.headers);
 
@@ -63,7 +68,7 @@ const server = http.createServer((req, res) => {
       });
 
       proxyReq.on('error', error => {
-        console.error('Proxy error:', error);
+        console.error(`[${new Date().toLocaleTimeString()}] [ERROR] Proxy error:`, error.message);
         res.writeHead(502, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Proxy request failed', details: error.message }));
       });
@@ -77,6 +82,7 @@ const server = http.createServer((req, res) => {
     });
 
   } catch (error) {
+    console.error(`[${new Date().toLocaleTimeString()}] [ERROR] Invalid URL:`, error.message);
     res.writeHead(400, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Invalid URL', details: error.message }));
   }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Message } from '../types';
 import { StorageManager } from '../utils/storage';
 import { ServiceBusAPI } from '../services/serviceBusApi';
+import { MessageModal } from './MessageModal';
 import './ListView.css';
 
 interface MessageHistoryViewProps {
@@ -13,6 +14,7 @@ export const MessageHistoryView: React.FC<MessageHistoryViewProps> = ({ api }) =
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
   const [resendingMessages, setResendingMessages] = useState<Set<string>>(new Set());
   const [resendStatus, setResendStatus] = useState<{ [key: string]: 'success' | 'error' }>({});
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
 
   useEffect(() => {
     loadMessages();
@@ -99,6 +101,49 @@ export const MessageHistoryView: React.FC<MessageHistoryViewProps> = ({ api }) =
     }
   };
 
+  const handleEditMessage = async (
+    body: string,
+    properties: any[],
+    messageProps: any
+  ) => {
+    if (!api || !editingMessage) return;
+
+    // Send the edited message
+    if (editingMessage.destinationType === 'queue') {
+      await api.sendMessageToQueue(
+        editingMessage.destination,
+        body,
+        properties,
+        messageProps
+      );
+    } else {
+      await api.sendMessageToTopic(
+        editingMessage.destination,
+        body,
+        properties,
+        messageProps
+      );
+    }
+
+    // Save to history
+    StorageManager.saveMessage({
+      id: Date.now().toString(),
+      body,
+      properties,
+      subject: messageProps.subject,
+      contentType: messageProps.contentType,
+      correlationId: messageProps.correlationId,
+      messageId: messageProps.messageId,
+      sentAt: Date.now(),
+      destination: editingMessage.destination,
+      destinationType: editingMessage.destinationType,
+      subscriptionName: editingMessage.subscriptionName,
+    });
+
+    loadMessages();
+    setEditingMessage(null);
+  };
+
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleString();
   };
@@ -133,6 +178,17 @@ export const MessageHistoryView: React.FC<MessageHistoryViewProps> = ({ api }) =
                 <span className="message-date">{formatDate(message.sentAt)}</span>
               </div>
               <div className="message-actions">
+                <button
+                  className="resend-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingMessage(message);
+                  }}
+                  disabled={!api}
+                  title="Edit and resend message"
+                >
+                  ✏️
+                </button>
                 <button
                   className="resend-button"
                   onClick={(e) => {
@@ -207,6 +263,24 @@ export const MessageHistoryView: React.FC<MessageHistoryViewProps> = ({ api }) =
           </div>
         ))}
       </div>
+
+      {editingMessage && (
+        <MessageModal
+          isOpen={!!editingMessage}
+          onClose={() => setEditingMessage(null)}
+          onSend={handleEditMessage}
+          destinationType={editingMessage.destinationType}
+          destinationName={editingMessage.destination}
+          previousMessage={{
+            body: editingMessage.body,
+            properties: editingMessage.properties,
+            subject: editingMessage.subject,
+            contentType: editingMessage.contentType,
+            correlationId: editingMessage.correlationId,
+            messageId: editingMessage.messageId,
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -15,12 +15,19 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
   const [error, setError] = useState<string | null>(null);
   const [selectedQueue, setSelectedQueue] = useState<Queue | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isCached, setIsCached] = useState(false);
 
   useEffect(() => {
-    if (api) {
+    // Reset cache when API changes (connection changes)
+    setIsCached(false);
+    setQueues([]);
+  }, [api]);
+
+  useEffect(() => {
+    if (api && !isCached) {
       loadQueues();
     }
-  }, [api]);
+  }, [api, isCached]);
 
   const loadQueues = async () => {
     if (!api) return;
@@ -31,6 +38,7 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
     try {
       const fetchedQueues = await api.getQueues();
       setQueues(fetchedQueues);
+      setIsCached(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load queues');
     } finally {
@@ -67,20 +75,6 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
     });
   };
 
-  const handleViewDLQ = async (queueName: string) => {
-    if (!api) return;
-
-    try {
-      const messages = await api.getDeadLetterMessages(queueName);
-      if (messages.length > 0) {
-        alert(`DLQ Messages:\n\n${JSON.stringify(messages, null, 2)}`);
-      } else {
-        alert('No dead letter messages found');
-      }
-    } catch (error) {
-      alert(`Failed to fetch DLQ messages: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
 
   if (!api) {
     return (
@@ -158,25 +152,6 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
             <div className="card-header">
               <h3>{queue.name}</h3>
             </div>
-            <div className="card-body">
-              <div className="card-stats">
-                <div className="stat">
-                  <span className="stat-label">Messages</span>
-                  <span className="stat-value">{queue.messageCount ?? '—'}</span>
-                </div>
-                <div className="stat">
-                  <span className="stat-label">Dead Letters</span>
-                  <span
-                    className="stat-value dead-letter"
-                    onClick={() => queue.deadLetterMessageCount && queue.deadLetterMessageCount > 0 && handleViewDLQ(queue.name)}
-                    title={queue.deadLetterMessageCount && queue.deadLetterMessageCount > 0 ? "Click to view DLQ messages" : undefined}
-                    style={{ cursor: queue.deadLetterMessageCount && queue.deadLetterMessageCount > 0 ? 'pointer' : 'default' }}
-                  >
-                    {queue.deadLetterMessageCount ?? '—'}
-                  </span>
-                </div>
-              </div>
-            </div>
             <div className="card-actions">
               <button
                 className="button-primary"
@@ -196,6 +171,9 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
           onSend={handleSendMessage}
           destinationType="queue"
           destinationName={selectedQueue.name}
+          previousMessage={
+            StorageManager.getLastMessageForDestination(selectedQueue.name, 'queue')
+          }
         />
       )}
     </div>

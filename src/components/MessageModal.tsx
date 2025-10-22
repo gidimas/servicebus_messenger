@@ -18,6 +18,14 @@ interface MessageModalProps {
   destinationType: 'queue' | 'topic';
   destinationName: string;
   correlationFilter?: string;
+  previousMessage?: {
+    body?: string;
+    properties: MessageProperty[];
+    subject?: string;
+    contentType?: string;
+    correlationId?: string;
+    messageId?: string;
+  };
 }
 
 export const MessageModal: React.FC<MessageModalProps> = ({
@@ -27,6 +35,7 @@ export const MessageModal: React.FC<MessageModalProps> = ({
   destinationType,
   destinationName,
   correlationFilter,
+  previousMessage,
 }) => {
   const [body, setBody] = useState('');
   const [subject, setSubject] = useState('');
@@ -39,10 +48,22 @@ export const MessageModal: React.FC<MessageModalProps> = ({
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    if (isOpen && correlationFilter) {
-      setSubject(correlationFilter);
+    if (isOpen) {
+      // Load previous message data if available
+      if (previousMessage) {
+        setBody(previousMessage.body || '');
+        setProperties(previousMessage.properties || []);
+        setSubject(previousMessage.subject || '');
+        setContentType(previousMessage.contentType || 'application/json');
+        setCorrelationId(previousMessage.correlationId || '');
+        setMessageId(previousMessage.messageId || '');
+      }
+      // Override subject with correlation filter if provided
+      if (correlationFilter) {
+        setSubject(correlationFilter);
+      }
     }
-  }, [isOpen, correlationFilter]);
+  }, [isOpen, correlationFilter, previousMessage]);
 
   if (!isOpen) return null;
 
@@ -78,10 +99,9 @@ export const MessageModal: React.FC<MessageModalProps> = ({
 
       setSendStatus('success');
 
-      // Reset only body and properties after successful send
-      // Keep subject, contentType, etc. for convenience
+      // Reset only body after successful send
+      // Keep properties, subject, contentType, etc. for convenience
       setBody('');
-      setProperties([]);
     } catch (error) {
       setSendStatus('error');
       setErrorMessage(error instanceof Error ? error.message : 'Failed to send message');
@@ -116,14 +136,13 @@ export const MessageModal: React.FC<MessageModalProps> = ({
 
         <form onSubmit={handleSend}>
           <div className="form-group">
-            <label htmlFor="body">Message Body *</label>
+            <label htmlFor="body">Message Body</label>
             <textarea
               id="body"
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder='{"message": "Hello, Service Bus!"}'
               rows={8}
-              required
               autoFocus
             />
           </div>

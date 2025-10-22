@@ -62,6 +62,18 @@ export const StorageManager = {
     }
   },
 
+  getLastMessageForDestination(destination: string, destinationType: 'queue' | 'topic'): Message | undefined {
+    try {
+      const history = this.getMessageHistory();
+      return history.find(
+        msg => msg.destination === destination && msg.destinationType === destinationType
+      );
+    } catch (error) {
+      console.error('Error getting last message for destination:', error);
+      return undefined;
+    }
+  },
+
   saveMessage(message: Message): void {
     try {
       const history = this.getMessageHistory();

@@ -18,12 +18,19 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubscription, setSelectedSubscription] = useState<{ topicName: string; subscription: any; correlationFilter?: string } | null>(null);
   const [loadingCorrelationFilter, setLoadingCorrelationFilter] = useState(false);
+  const [isCached, setIsCached] = useState(false);
 
   useEffect(() => {
-    if (api) {
+    // Reset cache when API changes (connection changes)
+    setIsCached(false);
+    setTopics([]);
+  }, [api]);
+
+  useEffect(() => {
+    if (api && !isCached) {
       loadTopics();
     }
-  }, [api]);
+  }, [api, isCached]);
 
   const loadTopics = async () => {
     if (!api) return;
@@ -34,6 +41,7 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
     try {
       const fetchedTopics = await api.getTopics();
       setTopics(fetchedTopics);
+      setIsCached(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load topics');
     } finally {
@@ -126,20 +134,6 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
     }
   };
 
-  const handleViewDLQ = async (topicName: string, subscriptionName: string) => {
-    if (!api) return;
-
-    try {
-      const messages = await api.getDeadLetterMessages(topicName, subscriptionName);
-      if (messages.length > 0) {
-        alert(`DLQ Messages:\n\n${JSON.stringify(messages, null, 2)}`);
-      } else {
-        alert('No dead letter messages found');
-      }
-    } catch (error) {
-      alert(`Failed to fetch DLQ messages: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
 
   if (!api) {
     return (
@@ -234,19 +228,6 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
                     <div key={sub.name} className="subscription-item">
                       <div className="subscription-content">
                         <span className="subscription-name">{sub.name}</span>
-                        <div className="subscription-stats">
-                          <span className="stat-small">
-                            Msgs: {sub.messageCount ?? '—'}
-                          </span>
-                          <span
-                            className="stat-small dead-letter clickable"
-                            onClick={() => sub.deadLetterMessageCount && sub.deadLetterMessageCount > 0 && handleViewDLQ(topic.name, sub.name)}
-                            title={sub.deadLetterMessageCount && sub.deadLetterMessageCount > 0 ? "Click to view DLQ messages" : undefined}
-                            style={{ cursor: sub.deadLetterMessageCount && sub.deadLetterMessageCount > 0 ? 'pointer' : 'default' }}
-                          >
-                            DLQ: {sub.deadLetterMessageCount ?? '—'}
-                          </span>
-                        </div>
                       </div>
                       <button
                         className="subscription-send-btn"
@@ -282,6 +263,12 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
           destinationType="topic"
           destinationName={selectedTopic?.name || selectedSubscription?.topicName || ''}
           correlationFilter={selectedSubscription?.correlationFilter}
+          previousMessage={
+            StorageManager.getLastMessageForDestination(
+              selectedTopic?.name || selectedSubscription?.topicName || '',
+              'topic'
+            )
+          }
         />
       )}
     </div>

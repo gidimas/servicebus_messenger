@@ -288,54 +288,6 @@ export class ServiceBusAPI {
     }
   }
 
-  async getDeadLetterMessages(queueOrTopicName: string, subscriptionName?: string): Promise<any[]> {
-    try {
-      const path = subscriptionName
-        ? `${queueOrTopicName}/Subscriptions/${subscriptionName}/$DeadLetterQueue/messages/head`
-        : `${queueOrTopicName}/$DeadLetterQueue/messages/head`;
-
-      const resourcePath = subscriptionName
-        ? `${queueOrTopicName}/Subscriptions/${subscriptionName}/$DeadLetterQueue`
-        : `${queueOrTopicName}/$DeadLetterQueue`;
-
-      const targetUrl = `${this.endpoint}/${path}?api-version=2021-05`;
-      const response = await fetch(
-        this.buildProxyUrl(targetUrl),
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': this.getAuthHeader(resourcePath),
-          },
-        }
-      );
-
-      if (response.status === 204) {
-        // No messages
-        return [];
-      }
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch dead letter messages: ${response.status}`);
-      }
-
-      // Parse message from headers and body
-      const body = await response.text();
-      const message = {
-        body,
-        properties: {} as Record<string, string>,
-      };
-
-      // Extract properties from headers
-      response.headers.forEach((value, key) => {
-        message.properties[key] = value;
-      });
-
-      return [message];
-    } catch (error) {
-      console.error('Error fetching dead letter messages:', error);
-      throw error;
-    }
-  }
 
   private parseQueuesFromXml(xml: string): Queue[] {
     const parser = new DOMParser();
@@ -349,32 +301,8 @@ export class ServiceBusAPI {
       const title = entry.getElementsByTagName('title')[0]?.textContent;
 
       if (title) {
-        const content = entry.getElementsByTagName('content')[0];
-        const queueDescription = content?.getElementsByTagName('QueueDescription')[0];
-
-        let messageCount: number | undefined;
-        let deadLetterCount: number | undefined;
-
-        if (queueDescription) {
-          const messageCountNode = queueDescription.getElementsByTagName('MessageCount')[0];
-          const countDetails = queueDescription.getElementsByTagName('CountDetails')[0];
-
-          if (messageCountNode) {
-            messageCount = parseInt(messageCountNode.textContent || '0');
-          }
-
-          if (countDetails) {
-            const deadLetterNode = countDetails.getElementsByTagName('DeadLetterMessageCount')[0];
-            if (deadLetterNode) {
-              deadLetterCount = parseInt(deadLetterNode.textContent || '0');
-            }
-          }
-        }
-
         queues.push({
           name: title,
-          messageCount,
-          deadLetterMessageCount: deadLetterCount,
         });
       }
     }
@@ -415,40 +343,8 @@ export class ServiceBusAPI {
       const title = entry.getElementsByTagName('title')[0]?.textContent;
 
       if (title) {
-        const content = entry.getElementsByTagName('content')[0];
-        const subscriptionDescription = content?.getElementsByTagName('SubscriptionDescription')[0];
-
-        let messageCount: number | undefined;
-        let deadLetterCount: number | undefined;
-
-        if (subscriptionDescription) {
-          // Get all elements and search by tag name (ignoring namespaces)
-          const allElements = subscriptionDescription.getElementsByTagName('*');
-
-          for (let j = 0; j < allElements.length; j++) {
-            const element = allElements[j];
-            const tagName = element.tagName.split(':').pop(); // Remove namespace prefix
-
-            if (tagName === 'MessageCount' && !messageCount) {
-              const count = parseInt(element.textContent || '0');
-              if (!isNaN(count)) {
-                messageCount = count;
-              }
-            }
-
-            if (tagName === 'DeadLetterMessageCount') {
-              const count = parseInt(element.textContent || '0');
-              if (!isNaN(count)) {
-                deadLetterCount = count;
-              }
-            }
-          }
-        }
-
         subscriptions.push({
           name: title,
-          messageCount,
-          deadLetterMessageCount: deadLetterCount,
         });
       }
     }
