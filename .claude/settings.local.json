@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(mkdir -p src/{components,services,utils,types,hooks})"
-    ],
-    "deny": [],
-    "ask": []
-  }
-}
