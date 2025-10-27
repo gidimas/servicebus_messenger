@@ -15,35 +15,22 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
   const [error, setError] = useState<string | null>(null);
   const [selectedQueue, setSelectedQueue] = useState<Queue | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isCached, setIsCached] = useState(false);
 
   useEffect(() => {
-    // Reset cache when API changes (connection changes)
-    setIsCached(false);
-    setQueues([]);
-  }, [api]);
-
-  useEffect(() => {
-    if (api && !isCached) {
+    if (api) {
       loadQueues();
     }
-  }, [api, isCached]);
+  }, [api]);
 
   const loadQueues = async (forceRefresh = false) => {
     if (!api) return;
-
-    // If forcing refresh, clear cache flag
-    if (forceRefresh) {
-      setIsCached(false);
-    }
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const fetchedQueues = await api.getQueues();
+      const fetchedQueues = await api.getQueues(forceRefresh);
       setQueues(fetchedQueues);
-      setIsCached(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load queues');
     } finally {

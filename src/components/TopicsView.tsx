@@ -18,35 +18,22 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubscription, setSelectedSubscription] = useState<{ topicName: string; subscription: any; correlationFilter?: string } | null>(null);
   const [loadingCorrelationFilter, setLoadingCorrelationFilter] = useState(false);
-  const [isCached, setIsCached] = useState(false);
 
   useEffect(() => {
-    // Reset cache when API changes (connection changes)
-    setIsCached(false);
-    setTopics([]);
-  }, [api]);
-
-  useEffect(() => {
-    if (api && !isCached) {
+    if (api) {
       loadTopics();
     }
-  }, [api, isCached]);
+  }, [api]);
 
   const loadTopics = async (forceRefresh = false) => {
     if (!api) return;
-
-    // If forcing refresh, clear cache flag
-    if (forceRefresh) {
-      setIsCached(false);
-    }
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const fetchedTopics = await api.getTopics();
+      const fetchedTopics = await api.getTopics(forceRefresh);
       setTopics(fetchedTopics);
-      setIsCached(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load topics');
     } finally {

@@ -6,6 +6,9 @@ export class ServiceBusAPI {
   private keyName: string;
   private keyValue: string;
   private proxyUrl: string = 'http://localhost:3001';
+  private queuesCache: { data: Queue[] | null; timestamp: number } = { data: null, timestamp: 0 };
+  private topicsCache: { data: Topic[] | null; timestamp: number } = { data: null, timestamp: 0 };
+  private cacheDuration: number = 5 * 60 * 1000; // 5 minutes
 
   constructor(endpoint: string, keyName: string, keyValue: string) {
     this.endpoint = endpoint.replace('sb://', 'https://').replace(/\/$/, '');
@@ -93,7 +96,12 @@ export class ServiceBusAPI {
     }
   }
 
-  async getQueues(): Promise<Queue[]> {
+  async getQueues(forceRefresh = false): Promise<Queue[]> {
+    // Check cache if not forcing refresh
+    if (!forceRefresh && this.queuesCache.data && (Date.now() - this.queuesCache.timestamp) < this.cacheDuration) {
+      return this.queuesCache.data;
+    }
+
     try {
       const targetUrl = `${this.endpoint}/$Resources/Queues?api-version=2021-05`;
       const response = await fetch(this.buildProxyUrl(targetUrl), {
@@ -109,14 +117,24 @@ export class ServiceBusAPI {
       }
 
       const text = await response.text();
-      return this.parseQueuesFromXml(text);
+      const queues = this.parseQueuesFromXml(text);
+
+      // Update cache
+      this.queuesCache = { data: queues, timestamp: Date.now() };
+
+      return queues;
     } catch (error) {
       console.error('Error fetching queues:', error);
       throw error;
     }
   }
 
-  async getTopics(): Promise<Topic[]> {
+  async getTopics(forceRefresh = false): Promise<Topic[]> {
+    // Check cache if not forcing refresh
+    if (!forceRefresh && this.topicsCache.data && (Date.now() - this.topicsCache.timestamp) < this.cacheDuration) {
+      return this.topicsCache.data;
+    }
+
     try {
       const targetUrl = `${this.endpoint}/$Resources/Topics?api-version=2021-05`;
       const response = await fetch(this.buildProxyUrl(targetUrl), {
@@ -132,7 +150,12 @@ export class ServiceBusAPI {
       }
 
       const text = await response.text();
-      return this.parseTopicsFromXml(text);
+      const topics = this.parseTopicsFromXml(text);
+
+      // Update cache
+      this.topicsCache = { data: topics, timestamp: Date.now() };
+
+      return topics;
     } catch (error) {
       console.error('Error fetching topics:', error);
       throw error;
