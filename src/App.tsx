@@ -28,7 +28,7 @@ function App() {
     updateConnection,
     deleteConnection,
     selectConnection,
-    getAPI,
+    api,
   } = useConnections();
 
   // Show connection modal on first load if no connections exist
@@ -56,8 +56,6 @@ function App() {
     const newConnection = addConnection(connectionString, name);
     selectConnection(newConnection.id);
   };
-
-  const api = getAPI();
 
   return (
     <div className="app">

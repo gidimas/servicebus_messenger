@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { ConnectionString, ConnectionStatus } from '../types';
 import { StorageManager } from '../utils/storage';
 import { parseConnectionString } from '../utils/sasToken';
@@ -121,7 +121,7 @@ export function useConnections() {
     }
   }, [connections]);
 
-  const getAPI = useCallback((): ServiceBusAPI | null => {
+  const api = useMemo((): ServiceBusAPI | null => {
     if (!selectedConnection) return null;
 
     return new ServiceBusAPI(
@@ -142,6 +142,6 @@ export function useConnections() {
     deleteConnection,
     selectConnection,
     testConnection,
-    getAPI,
+    api,
   };
 }
