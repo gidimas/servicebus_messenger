@@ -29,8 +29,13 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
     }
   }, [api, isCached]);
 
-  const loadQueues = async () => {
+  const loadQueues = async (forceRefresh = false) => {
     if (!api) return;
+
+    // If forcing refresh, clear cache flag
+    if (forceRefresh) {
+      setIsCached(false);
+    }
 
     setIsLoading(true);
     setError(null);
@@ -102,7 +107,7 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
       <div className="list-view">
         <div className="error-state">
           <p>{error}</p>
-          <button className="button-primary" onClick={loadQueues}>
+          <button className="button-primary" onClick={() => loadQueues(true)}>
             Retry
           </button>
         </div>
@@ -115,7 +120,7 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
       <div className="list-view">
         <div className="empty-state">
           <p>No queues found</p>
-          <button className="button-secondary" onClick={loadQueues}>
+          <button className="button-secondary" onClick={() => loadQueues(true)}>
             Refresh
           </button>
         </div>
@@ -131,7 +136,7 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
     <div className="list-view">
       <div className="list-header">
         <h2>Queues ({filteredQueues.length})</h2>
-        <button className="button-secondary" onClick={loadQueues}>
+        <button className="button-secondary" onClick={() => loadQueues(true)}>
           Refresh
         </button>
       </div>

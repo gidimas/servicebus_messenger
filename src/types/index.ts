@@ -26,9 +26,12 @@ export interface Subscription {
   correlationFilter?: string;
 }
 
+export type PropertyType = 'string' | 'int' | 'long' | 'float' | 'double' | 'boolean' | 'guid' | 'datetime';
+
 export interface MessageProperty {
   key: string;
   value: string;
+  type: PropertyType;
 }
 
 export interface Message {

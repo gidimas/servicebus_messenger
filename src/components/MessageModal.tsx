@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { MessageProperty } from '../types';
+import type { MessageProperty, PropertyType } from '../types';
 import './Modal.css';
 
 interface MessageModalProps {
@@ -68,16 +68,20 @@ export const MessageModal: React.FC<MessageModalProps> = ({
   if (!isOpen) return null;
 
   const handleAddProperty = () => {
-    setProperties([...properties, { key: '', value: '' }]);
+    setProperties([...properties, { key: '', value: '', type: 'string' }]);
   };
 
   const handleRemoveProperty = (index: number) => {
     setProperties(properties.filter((_, i) => i !== index));
   };
 
-  const handlePropertyChange = (index: number, field: 'key' | 'value', value: string) => {
+  const handlePropertyChange = (index: number, field: 'key' | 'value' | 'type', value: string) => {
     const updated = [...properties];
-    updated[index][field] = value;
+    if (field === 'type') {
+      updated[index][field] = value as PropertyType;
+    } else {
+      updated[index][field] = value;
+    }
     setProperties(updated);
   };
 
@@ -123,7 +127,7 @@ export const MessageModal: React.FC<MessageModalProps> = ({
   };
 
   return (
-    <div className="modal-overlay" onClick={handleClose}>
+    <div className="modal-overlay" onClick={(e) => e.stopPropagation()}>
       <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>
@@ -214,12 +218,28 @@ export const MessageModal: React.FC<MessageModalProps> = ({
                     value={prop.key}
                     onChange={(e) => handlePropertyChange(index, 'key', e.target.value)}
                     placeholder="Property name"
+                    style={{ flex: '2' }}
                   />
+                  <select
+                    value={prop.type}
+                    onChange={(e) => handlePropertyChange(index, 'type', e.target.value)}
+                    style={{ flex: '1' }}
+                  >
+                    <option value="string">String</option>
+                    <option value="int">Int</option>
+                    <option value="long">Long</option>
+                    <option value="float">Float</option>
+                    <option value="double">Double</option>
+                    <option value="boolean">Boolean</option>
+                    <option value="guid">GUID</option>
+                    <option value="datetime">DateTime</option>
+                  </select>
                   <input
                     type="text"
                     value={prop.value}
                     onChange={(e) => handlePropertyChange(index, 'value', e.target.value)}
                     placeholder="Property value"
+                    style={{ flex: '2' }}
                   />
                   <button
                     type="button"

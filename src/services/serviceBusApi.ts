@@ -1,5 +1,5 @@
 import { generateResourceSASToken, generateSASToken } from '../utils/sasToken';
-import type { Queue, Topic, Subscription, MessageProperty } from '../types';
+import type { Queue, Topic, Subscription, MessageProperty, PropertyType } from '../types';
 
 export class ServiceBusAPI {
   private endpoint: string;
@@ -11,6 +11,45 @@ export class ServiceBusAPI {
     this.endpoint = endpoint.replace('sb://', 'https://').replace(/\/$/, '');
     this.keyName = keyName;
     this.keyValue = keyValue;
+  }
+
+  private formatPropertyValue(value: string, type: PropertyType): string {
+    switch (type) {
+      case 'int':
+      case 'long':
+      case 'float':
+      case 'double':
+        return value;
+      case 'boolean':
+        return value.toLowerCase() === 'true' ? 'true' : 'false';
+      case 'guid':
+      case 'string':
+      case 'datetime':
+      default:
+        return value;
+    }
+  }
+
+  private getPropertyTypeHeader(type: PropertyType): string {
+    switch (type) {
+      case 'int':
+        return 'Edm.Int32';
+      case 'long':
+        return 'Edm.Int64';
+      case 'float':
+        return 'Edm.Single';
+      case 'double':
+        return 'Edm.Double';
+      case 'boolean':
+        return 'Edm.Boolean';
+      case 'guid':
+        return 'Edm.Guid';
+      case 'datetime':
+        return 'Edm.DateTime';
+      case 'string':
+      default:
+        return 'Edm.String';
+    }
   }
 
   private buildProxyUrl(targetUrl: string): string {
@@ -205,10 +244,15 @@ export class ServiceBusAPI {
         headers['MessageId'] = messageProperties.messageId;
       }
 
-      // Add custom properties
+      // Add custom properties with type information
       if (properties) {
         properties.forEach(prop => {
-          headers[prop.key] = prop.value;
+          const formattedValue = this.formatPropertyValue(prop.value, prop.type);
+          headers[prop.key] = formattedValue;
+          // Add type header for non-string types
+          if (prop.type !== 'string') {
+            headers[`${prop.key}@type`] = this.getPropertyTypeHeader(prop.type);
+          }
         });
       }
 
@@ -261,10 +305,15 @@ export class ServiceBusAPI {
         headers['MessageId'] = messageProperties.messageId;
       }
 
-      // Add custom properties
+      // Add custom properties with type information
       if (properties) {
         properties.forEach(prop => {
-          headers[prop.key] = prop.value;
+          const formattedValue = this.formatPropertyValue(prop.value, prop.type);
+          headers[prop.key] = formattedValue;
+          // Add type header for non-string types
+          if (prop.type !== 'string') {
+            headers[`${prop.key}@type`] = this.getPropertyTypeHeader(prop.type);
+          }
         });
       }
 

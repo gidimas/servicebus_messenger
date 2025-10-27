@@ -32,8 +32,13 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
     }
   }, [api, isCached]);
 
-  const loadTopics = async () => {
+  const loadTopics = async (forceRefresh = false) => {
     if (!api) return;
+
+    // If forcing refresh, clear cache flag
+    if (forceRefresh) {
+      setIsCached(false);
+    }
 
     setIsLoading(true);
     setError(null);
@@ -161,7 +166,7 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
       <div className="list-view">
         <div className="error-state">
           <p>{error}</p>
-          <button className="button-primary" onClick={loadTopics}>
+          <button className="button-primary" onClick={() => loadTopics(true)}>
             Retry
           </button>
         </div>
@@ -174,7 +179,7 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
       <div className="list-view">
         <div className="empty-state">
           <p>No topics found</p>
-          <button className="button-secondary" onClick={loadTopics}>
+          <button className="button-secondary" onClick={() => loadTopics(true)}>
             Refresh
           </button>
         </div>
@@ -190,7 +195,7 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
     <div className="list-view">
       <div className="list-header">
         <h2>Topics ({filteredTopics.length})</h2>
-        <button className="button-secondary" onClick={loadTopics}>
+        <button className="button-secondary" onClick={() => loadTopics(true)}>
           Refresh
         </button>
       </div>
