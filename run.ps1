@@ -169,8 +169,9 @@ Start-Sleep -Seconds 2
 
 # Verify proxy is actually listening on port 3001
 try {
-    $testConnection = Test-NetConnection -ComputerName localhost -Port 3001 -WarningAction SilentlyContinue -InformationLevel Quiet
-    if (-not $testConnection) {
+    $testConnection = Test-NetConnection -ComputerName localhost -Port 3001 -WarningAction SilentlyContinue -InformationLevel Quiet -ErrorAction SilentlyContinue | Out-Null
+    $testResult = $?
+    if (-not $testResult) {
         throw "Proxy server is not responding on port 3001"
     }
     Write-Host "[OK] Proxy server started successfully" -ForegroundColor Green
