@@ -271,10 +271,12 @@ export class ServiceBusAPI {
       if (properties) {
         properties.forEach(prop => {
           const formattedValue = this.formatPropertyValue(prop.value, prop.type);
-          headers[prop.key] = formattedValue;
+          // Prefix with BrokerProperties- to ensure valid HTTP header names
+          const headerName = `BrokerProperties-${prop.key}`;
+          headers[headerName] = formattedValue;
           // Add type header for non-string types
           if (prop.type !== 'string') {
-            headers[`${prop.key}@type`] = this.getPropertyTypeHeader(prop.type);
+            headers[`${headerName}@type`] = this.getPropertyTypeHeader(prop.type);
           }
         });
       }
@@ -332,10 +334,12 @@ export class ServiceBusAPI {
       if (properties) {
         properties.forEach(prop => {
           const formattedValue = this.formatPropertyValue(prop.value, prop.type);
-          headers[prop.key] = formattedValue;
+          // Prefix with BrokerProperties- to ensure valid HTTP header names
+          const headerName = `BrokerProperties-${prop.key}`;
+          headers[headerName] = formattedValue;
           // Add type header for non-string types
           if (prop.type !== 'string') {
-            headers[`${prop.key}@type`] = this.getPropertyTypeHeader(prop.type);
+            headers[`${headerName}@type`] = this.getPropertyTypeHeader(prop.type);
           }
         });
       }
