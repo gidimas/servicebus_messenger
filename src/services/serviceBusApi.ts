@@ -261,29 +261,36 @@ export class ServiceBusAPI {
         'Content-Type': messageProperties?.contentType || 'application/json',
       };
 
+      // Build BrokerProperties as JSON object
+      const brokerProps: Record<string, any> = {};
+
       if (messageProperties?.subject) {
-        headers['Label'] = messageProperties.subject;
+        brokerProps['Label'] = messageProperties.subject;
       }
 
       if (messageProperties?.correlationId) {
-        headers['CorrelationId'] = messageProperties.correlationId;
+        brokerProps['CorrelationId'] = messageProperties.correlationId;
       }
 
       if (messageProperties?.messageId) {
-        headers['MessageId'] = messageProperties.messageId;
+        brokerProps['MessageId'] = messageProperties.messageId;
       }
 
-      // Add custom properties with type information
+      // Add BrokerProperties header if we have any broker properties
+      if (Object.keys(brokerProps).length > 0) {
+        headers['BrokerProperties'] = JSON.stringify(brokerProps);
+      }
+
+      // Add custom properties as individual headers
       if (properties) {
         properties.forEach(prop => {
           const formattedValue = this.formatPropertyValue(prop.value, prop.type);
-          // Sanitize and prefix with BrokerProperties- to ensure valid HTTP header names
+          // Sanitize property key for use in header name
           const sanitizedKey = this.sanitizeHeaderName(prop.key);
-          const headerName = `BrokerProperties-${sanitizedKey}`;
-          headers[headerName] = formattedValue;
-          // Add type header for non-string types (use -Type suffix instead of @type)
+          headers[sanitizedKey] = formattedValue;
+          // Add type header for non-string types
           if (prop.type !== 'string') {
-            headers[`${headerName}-Type`] = this.getPropertyTypeHeader(prop.type);
+            headers[`${sanitizedKey}-Type`] = this.getPropertyTypeHeader(prop.type);
           }
         });
       }
@@ -325,29 +332,36 @@ export class ServiceBusAPI {
         'Content-Type': messageProperties?.contentType || 'application/json',
       };
 
+      // Build BrokerProperties as JSON object
+      const brokerProps: Record<string, any> = {};
+
       if (messageProperties?.subject) {
-        headers['Label'] = messageProperties.subject;
+        brokerProps['Label'] = messageProperties.subject;
       }
 
       if (messageProperties?.correlationId) {
-        headers['CorrelationId'] = messageProperties.correlationId;
+        brokerProps['CorrelationId'] = messageProperties.correlationId;
       }
 
       if (messageProperties?.messageId) {
-        headers['MessageId'] = messageProperties.messageId;
+        brokerProps['MessageId'] = messageProperties.messageId;
       }
 
-      // Add custom properties with type information
+      // Add BrokerProperties header if we have any broker properties
+      if (Object.keys(brokerProps).length > 0) {
+        headers['BrokerProperties'] = JSON.stringify(brokerProps);
+      }
+
+      // Add custom properties as individual headers
       if (properties) {
         properties.forEach(prop => {
           const formattedValue = this.formatPropertyValue(prop.value, prop.type);
-          // Sanitize and prefix with BrokerProperties- to ensure valid HTTP header names
+          // Sanitize property key for use in header name
           const sanitizedKey = this.sanitizeHeaderName(prop.key);
-          const headerName = `BrokerProperties-${sanitizedKey}`;
-          headers[headerName] = formattedValue;
-          // Add type header for non-string types (use -Type suffix instead of @type)
+          headers[sanitizedKey] = formattedValue;
+          // Add type header for non-string types
           if (prop.type !== 'string') {
-            headers[`${headerName}-Type`] = this.getPropertyTypeHeader(prop.type);
+            headers[`${sanitizedKey}-Type`] = this.getPropertyTypeHeader(prop.type);
           }
         });
       }

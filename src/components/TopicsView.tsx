@@ -117,9 +117,11 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
     setLoadingCorrelationFilter(true);
     try {
       const correlationFilter = await api.getSubscriptionCorrelationFilter(topicName, subscription.name);
+      console.log(`Correlation filter for ${subscription.name}:`, correlationFilter);
       setSelectedSubscription({ topicName, subscription, correlationFilter });
     } catch (error) {
       // If we can't get correlation filter, just open modal without it
+      console.error('Failed to get correlation filter:', error);
       setSelectedSubscription({ topicName, subscription });
     } finally {
       setLoadingCorrelationFilter(false);
