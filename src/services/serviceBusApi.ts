@@ -55,6 +55,12 @@ export class ServiceBusAPI {
     }
   }
 
+  private sanitizeHeaderName(name: string): string {
+    // Remove or replace invalid characters for HTTP header names
+    // Valid characters: alphanumeric, -, and _
+    return name.replace(/[^a-zA-Z0-9\-_]/g, '-');
+  }
+
   private buildProxyUrl(targetUrl: string): string {
     return `${this.proxyUrl}?url=${encodeURIComponent(targetUrl)}`;
   }
@@ -271,12 +277,13 @@ export class ServiceBusAPI {
       if (properties) {
         properties.forEach(prop => {
           const formattedValue = this.formatPropertyValue(prop.value, prop.type);
-          // Prefix with BrokerProperties- to ensure valid HTTP header names
-          const headerName = `BrokerProperties-${prop.key}`;
+          // Sanitize and prefix with BrokerProperties- to ensure valid HTTP header names
+          const sanitizedKey = this.sanitizeHeaderName(prop.key);
+          const headerName = `BrokerProperties-${sanitizedKey}`;
           headers[headerName] = formattedValue;
-          // Add type header for non-string types
+          // Add type header for non-string types (use -Type suffix instead of @type)
           if (prop.type !== 'string') {
-            headers[`${headerName}@type`] = this.getPropertyTypeHeader(prop.type);
+            headers[`${headerName}-Type`] = this.getPropertyTypeHeader(prop.type);
           }
         });
       }
@@ -334,12 +341,13 @@ export class ServiceBusAPI {
       if (properties) {
         properties.forEach(prop => {
           const formattedValue = this.formatPropertyValue(prop.value, prop.type);
-          // Prefix with BrokerProperties- to ensure valid HTTP header names
-          const headerName = `BrokerProperties-${prop.key}`;
+          // Sanitize and prefix with BrokerProperties- to ensure valid HTTP header names
+          const sanitizedKey = this.sanitizeHeaderName(prop.key);
+          const headerName = `BrokerProperties-${sanitizedKey}`;
           headers[headerName] = formattedValue;
-          // Add type header for non-string types
+          // Add type header for non-string types (use -Type suffix instead of @type)
           if (prop.type !== 'string') {
-            headers[`${headerName}@type`] = this.getPropertyTypeHeader(prop.type);
+            headers[`${headerName}-Type`] = this.getPropertyTypeHeader(prop.type);
           }
         });
       }
