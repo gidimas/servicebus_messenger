@@ -7,8 +7,8 @@ on:
       - master
 
 jobs:
-  build-and-release:
-    runs-on: ubuntu-latest
+  build-windows-exe:
+    runs-on: windows-latest
 
     permissions:
       contents: write
@@ -23,18 +23,28 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
       - name: Install dependencies
         run: npm ci
 
-      - name: Build application
+      - name: Build frontend
         run: npm run build
+
+      - name: Build Windows .exe with Bun
+        run: bun build standalone-server.js --compile --outfile ServiceBusMessenger.exe
 
       - name: Get version from package.json
         id: package-version
+        shell: bash
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
       - name: Check if release already exists
         id: check-release
+        shell: bash
         run: |
           if gh release view v${{ steps.package-version.outputs.version }} > /dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
@@ -44,38 +54,56 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create release zip
+      - name: Calculate file size
         if: steps.check-release.outputs.exists == 'false'
+        id: filesize
+        shell: bash
         run: |
-          cd dist
-          zip -r ../azure-servicebus-messenger-v${{ steps.package-version.outputs.version }}.zip .
-          cd ..
+          SIZE=$(ls -lh ServiceBusMessenger.exe | awk '{print $5}')
+          echo "size=$SIZE" >> $GITHUB_OUTPUT
 
       - name: Generate release notes
         if: steps.check-release.outputs.exists == 'false'
         id: release-notes
+        shell: bash
         run: |
           echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "## Azure Service Bus Messenger v${{ steps.package-version.outputs.version }}" >> $GITHUB_OUTPUT
+          echo "## 🚀 Azure Service Bus Messenger v${{ steps.package-version.outputs.version }}" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          echo "### What's Included" >> $GITHUB_OUTPUT
-          echo "- Web application files (HTML, CSS, JS)" >> $GITHUB_OUTPUT
-          echo "- PowerShell launcher script (run.ps1)" >> $GITHUB_OUTPUT
+          echo "### 📦 What's New" >> $GITHUB_OUTPUT
+          echo "**Single Executable Release** - No installation required!" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          echo "### How to Use" >> $GITHUB_OUTPUT
-          echo "1. Download and extract the zip file" >> $GITHUB_OUTPUT
-          echo "2. Right-click \`run.ps1\` and select \"Run with PowerShell\"" >> $GITHUB_OUTPUT
-          echo "3. If Node.js is not installed, the script will offer to install it automatically" >> $GITHUB_OUTPUT
+          echo "### ✨ Features" >> $GITHUB_OUTPUT
+          echo "- 💀 Dead Letter Queue viewer with bulk resend capability" >> $GITHUB_OUTPUT
+          echo "- 📝 Persistent message history (file-based storage)" >> $GITHUB_OUTPUT
+          echo "- 🔐 Connection management with SAS token generation" >> $GITHUB_OUTPUT
+          echo "- ✉️ Send messages to queues and topics" >> $GITHUB_OUTPUT
+          echo "- 📋 Message templates and property management" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          echo "### Requirements" >> $GITHUB_OUTPUT
-          echo "- Windows 10/11" >> $GITHUB_OUTPUT
-          echo "- Node.js (will be installed automatically if missing)" >> $GITHUB_OUTPUT
+          echo "### 🎯 How to Use" >> $GITHUB_OUTPUT
+          echo "1. Download **ServiceBusMessenger.exe** (~50-70MB)" >> $GITHUB_OUTPUT
+          echo "2. Double-click to run" >> $GITHUB_OUTPUT
+          echo "3. Browser opens automatically" >> $GITHUB_OUTPUT
+          echo "4. That's it! No installation needed." >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          echo "### Latest Changes" >> $GITHUB_OUTPUT
+          echo "### 💾 Data Storage" >> $GITHUB_OUTPUT
+          echo "Your connections and message history are stored in:" >> $GITHUB_OUTPUT
+          echo "\`%USERPROFILE%\\.servicebus-messenger\\data.json\`" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### 📊 File Information" >> $GITHUB_OUTPUT
+          echo "- **Size:** ${{ steps.filesize.outputs.size }}" >> $GITHUB_OUTPUT
+          echo "- **Format:** Single Windows executable" >> $GITHUB_OUTPUT
+          echo "- **Requirements:** Windows 10/11 (64-bit)" >> $GITHUB_OUTPUT
+          echo "- **Node.js Required:** ❌ No - everything is bundled!" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### 🔄 Latest Changes" >> $GITHUB_OUTPUT
           echo "\`\`\`" >> $GITHUB_OUTPUT
           git log -1 --pretty=format:"%s" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
           echo "\`\`\`" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "---" >> $GITHUB_OUTPUT
+          echo "Built with ❤️ using Bun and Claude Code" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
@@ -83,9 +111,9 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.package-version.outputs.version }}
-          name: Azure Service Bus Messenger v${{ steps.package-version.outputs.version }}
+          name: 🚀 v${{ steps.package-version.outputs.version }}
           body: ${{ steps.release-notes.outputs.notes }}
-          files: azure-servicebus-messenger-v${{ steps.package-version.outputs.version }}.zip
+          files: ServiceBusMessenger.exe
           draft: false
           prerelease: false
         env:
