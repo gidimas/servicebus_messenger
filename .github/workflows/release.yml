@@ -7,8 +7,8 @@ on:
       - master
 
 jobs:
-  build-windows-exe:
-    runs-on: windows-latest
+  build-and-release:
+    runs-on: ubuntu-latest
 
     permissions:
       contents: write
@@ -23,28 +23,18 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
       - name: Install dependencies
         run: npm ci
 
-      - name: Build frontend
+      - name: Build application
         run: npm run build
-
-      - name: Build Windows .exe with Bun
-        run: bun build standalone-server.js --compile --outfile ServiceBusMessenger.exe
 
       - name: Get version from package.json
         id: package-version
-        shell: bash
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
       - name: Check if release already exists
         id: check-release
-        shell: bash
         run: |
           if gh release view v${{ steps.package-version.outputs.version }} > /dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
@@ -54,50 +44,34 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Calculate file size
+      - name: Create release package
         if: steps.check-release.outputs.exists == 'false'
-        id: filesize
-        shell: bash
-        run: |
-          SIZE=$(ls -lh ServiceBusMessenger.exe | awk '{print $5}')
-          echo "size=$SIZE" >> $GITHUB_OUTPUT
-
-      - name: Create ZIP archive
-        if: steps.check-release.outputs.exists == 'false'
-        shell: bash
         run: |
           mkdir -p release
-          cp ServiceBusMessenger.exe release/ServiceBusMessenger.json
+          cp -r dist release/
+          cp standalone-server.js release/
+          cp package.json release/
+          cp RUN.ps1 release/
           echo "Azure Service Bus Messenger v${{ steps.package-version.outputs.version }}" > release/README.txt
           echo "" >> release/README.txt
-          echo "IMPORTANT - How to Run:" >> release/README.txt
-          echo "1. Extract this ZIP file" >> release/README.txt
-          echo "2. Rename 'ServiceBusMessenger.json' to 'ServiceBusMessenger.exe'" >> release/README.txt
-          echo "3. Double-click ServiceBusMessenger.exe" >> release/README.txt
-          echo "4. Browser opens automatically" >> release/README.txt
+          echo "How to Run:" >> release/README.txt
+          echo "1. Right-click RUN.ps1" >> release/README.txt
+          echo "2. Select 'Run with PowerShell'" >> release/README.txt
+          echo "3. Browser opens automatically" >> release/README.txt
           echo "" >> release/README.txt
-          echo "Why .json extension?" >> release/README.txt
-          echo "To bypass corporate firewalls and Windows SmartScreen that block .exe downloads." >> release/README.txt
-          echo "The file is safe - it's just renamed. Simply rename it back to .exe to run." >> release/README.txt
-          echo "" >> release/README.txt
-          echo "If Windows still blocks after renaming:" >> release/README.txt
-          echo "- Right-click ServiceBusMessenger.exe > Properties" >> release/README.txt
-          echo "- Check 'Unblock' at the bottom" >> release/README.txt
-          echo "- Click Apply and OK" >> release/README.txt
+          echo "Requirements:" >> release/README.txt
+          echo "- Windows 10/11" >> release/README.txt
+          echo "- Node.js 18+ (download from nodejs.org if needed)" >> release/README.txt
           cd release
-          7z a ../ServiceBusMessenger-v${{ steps.package-version.outputs.version }}.zip *
+          zip -r ../ServiceBusMessenger-v${{ steps.package-version.outputs.version }}.zip .
           cd ..
 
       - name: Generate release notes
         if: steps.check-release.outputs.exists == 'false'
         id: release-notes
-        shell: bash
         run: |
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo "## Azure Service Bus Messenger v${{ steps.package-version.outputs.version }}" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
-          echo "### What's New" >> $GITHUB_OUTPUT
-          echo "Single executable release - No installation required" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
           echo "### Features" >> $GITHUB_OUTPUT
           echo "- Dead Letter Queue viewer with bulk resend capability" >> $GITHUB_OUTPUT
@@ -108,25 +82,17 @@ jobs:
           echo "" >> $GITHUB_OUTPUT
           echo "### How to Use" >> $GITHUB_OUTPUT
           echo "1. Download and extract the ZIP file" >> $GITHUB_OUTPUT
-          echo "2. Rename ServiceBusMessenger.json to ServiceBusMessenger.exe" >> $GITHUB_OUTPUT
-          echo "3. Double-click ServiceBusMessenger.exe" >> $GITHUB_OUTPUT
-          echo "4. Browser opens automatically" >> $GITHUB_OUTPUT
+          echo "2. Right-click RUN.ps1 and select 'Run with PowerShell'" >> $GITHUB_OUTPUT
+          echo "3. Browser opens automatically" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          echo "### Why .json extension?" >> $GITHUB_OUTPUT
-          echo "The executable is renamed to .json to bypass corporate firewalls and download blocks." >> $GITHUB_OUTPUT
-          echo "Simply rename it back to .exe after extracting. See README.txt in the ZIP for details." >> $GITHUB_OUTPUT
+          echo "Alternative: Open PowerShell in the folder and run: node standalone-server.js" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          echo "### If Windows Blocks After Renaming" >> $GITHUB_OUTPUT
-          echo "Right-click the .exe > Properties > Check 'Unblock' > Apply > OK" >> $GITHUB_OUTPUT
+          echo "### Requirements" >> $GITHUB_OUTPUT
+          echo "- Windows 10/11" >> $GITHUB_OUTPUT
+          echo "- Node.js 18+ (download from nodejs.org)" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
           echo "### Data Storage" >> $GITHUB_OUTPUT
-          echo "Connections and message history stored in: %USERPROFILE%\\.servicebus-messenger\\data.json" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
-          echo "### File Information" >> $GITHUB_OUTPUT
-          echo "- Size: ${{ steps.filesize.outputs.size }}" >> $GITHUB_OUTPUT
-          echo "- Format: Windows executable (64-bit)" >> $GITHUB_OUTPUT
-          echo "- Requirements: Windows 10/11" >> $GITHUB_OUTPUT
-          echo "- Node.js Required: No - everything is bundled" >> $GITHUB_OUTPUT
+          echo "Connections and message history: %USERPROFILE%\\.servicebus-messenger\\data.json" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
           echo "### Latest Changes" >> $GITHUB_OUTPUT
           echo "\`\`\`" >> $GITHUB_OUTPUT
