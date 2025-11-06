@@ -1,5 +1,5 @@
 import { generateResourceSASToken, generateSASToken } from '../utils/sasToken';
-import type { Queue, Topic, Subscription, MessageProperty, PropertyType } from '../types';
+import type { Queue, Topic, Subscription, MessageProperty, PropertyType, DeadLetterMessage } from '../types';
 
 export class ServiceBusAPI {
   private endpoint: string;
@@ -383,6 +383,121 @@ export class ServiceBusAPI {
     } catch (error) {
       console.error('Error sending message to topic:', error);
       throw error;
+    }
+  }
+
+  async getDeadLetterMessages(topicName: string, subscriptionName: string): Promise<DeadLetterMessage[]> {
+    try {
+      const path = `${topicName}/Subscriptions/${subscriptionName}/$DeadLetterQueue/messages/head`;
+      const targetUrl = `${this.endpoint}/${path}?api-version=2021-05&timeout=5`;
+
+      const response = await fetch(
+        this.buildProxyUrl(targetUrl),
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': this.getAuthHeader(path),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ maxMessageCount: 100 })
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 204) {
+          // No messages in dead letter queue
+          return [];
+        }
+        throw new Error(`Failed to fetch dead letters: ${response.status} ${response.statusText}`);
+      }
+
+      const messages: DeadLetterMessage[] = [];
+      const brokerProperties = response.headers.get('brokerproperties');
+      const body = await response.text();
+
+      if (brokerProperties && body) {
+        const props = JSON.parse(brokerProperties);
+        const message = this.parseDeadLetterMessage(props, body, response.headers);
+        if (message) {
+          messages.push(message);
+        }
+      }
+
+      return messages;
+    } catch (error) {
+      console.error('Error fetching dead letter messages:', error);
+      throw error;
+    }
+  }
+
+  async deleteDeadLetterMessage(
+    topicName: string,
+    subscriptionName: string,
+    sequenceNumber: string,
+    lockToken: string
+  ): Promise<void> {
+    try {
+      const path = `${topicName}/Subscriptions/${subscriptionName}/$DeadLetterQueue/messages/${sequenceNumber}/${lockToken}`;
+      const targetUrl = `${this.endpoint}/${path}?api-version=2021-05`;
+
+      const response = await fetch(
+        this.buildProxyUrl(targetUrl),
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': this.getAuthHeader(path),
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete dead letter: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error deleting dead letter message:', error);
+      throw error;
+    }
+  }
+
+  private parseDeadLetterMessage(
+    brokerProps: any,
+    body: string,
+    headers: Headers
+  ): DeadLetterMessage | null {
+    try {
+      const properties: MessageProperty[] = [];
+
+      // Parse custom properties from headers
+      headers.forEach((value, key) => {
+        if (!key.startsWith('broker') &&
+            !key.startsWith('content') &&
+            !key.startsWith('authorization') &&
+            key !== 'date' &&
+            key !== 'server' &&
+            key !== 'transfer-encoding') {
+          properties.push({
+            key,
+            value,
+            type: 'string'
+          });
+        }
+      });
+
+      return {
+        sequenceNumber: brokerProps.SequenceNumber?.toString() || '',
+        messageId: brokerProps.MessageId,
+        subject: brokerProps.Label,
+        contentType: headers.get('content-type') || undefined,
+        correlationId: brokerProps.CorrelationId,
+        body,
+        properties,
+        enqueuedTime: brokerProps.EnqueuedTimeUtc,
+        deadLetterReason: brokerProps.DeadLetterReason,
+        deadLetterErrorDescription: brokerProps.DeadLetterErrorDescription,
+      };
+    } catch (error) {
+      console.error('Error parsing dead letter message:', error);
+      return null;
     }
   }
 

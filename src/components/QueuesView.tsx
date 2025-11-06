@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { Queue } from '../types';
+import type { Queue, Message } from '../types';
 import { ServiceBusAPI } from '../services/serviceBusApi';
 import { MessageModal } from './MessageModal';
 import { StorageManager } from '../utils/storage';
@@ -15,12 +15,20 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
   const [error, setError] = useState<string | null>(null);
   const [selectedQueue, setSelectedQueue] = useState<Queue | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [previousMessage, setPreviousMessage] = useState<Message | undefined>(undefined);
 
   useEffect(() => {
     if (api) {
       loadQueues();
     }
   }, [api]);
+
+  useEffect(() => {
+    if (selectedQueue) {
+      StorageManager.getLastMessageForDestination(selectedQueue.name, 'queue')
+        .then(msg => setPreviousMessage(msg));
+    }
+  }, [selectedQueue]);
 
   const loadQueues = async (forceRefresh = false) => {
     if (!api) return;
@@ -53,7 +61,7 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
     );
 
     // Save to history
-    StorageManager.saveMessage({
+    await StorageManager.saveMessage({
       id: Date.now().toString(),
       body,
       properties,
@@ -163,9 +171,7 @@ export const QueuesView: React.FC<QueuesViewProps> = ({ api }) => {
           onSend={handleSendMessage}
           destinationType="queue"
           destinationName={selectedQueue.name}
-          previousMessage={
-            StorageManager.getLastMessageForDestination(selectedQueue.name, 'queue')
-          }
+          previousMessage={previousMessage}
         />
       )}
     </div>

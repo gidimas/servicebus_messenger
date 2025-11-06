@@ -1,70 +1,155 @@
 import type { ConnectionString, Message } from '../types';
 
-const CONNECTIONS_KEY = 'servicebus_connections';
-const MESSAGE_HISTORY_KEY = 'servicebus_message_history';
-const SELECTED_CONNECTION_KEY = 'servicebus_selected_connection';
+const STORAGE_API_URL = 'http://localhost:3001/storage';
+
+// In-memory cache
+let storageCache: {
+  connections: ConnectionString[];
+  messageHistory: Message[];
+  selectedConnectionId: string | null;
+} | null = null;
+
+// Load storage from file-based API
+async function loadStorage() {
+  try {
+    const response = await fetch(STORAGE_API_URL);
+    if (response.ok) {
+      storageCache = await response.json();
+    } else {
+      console.error('Failed to load storage from API');
+      storageCache = { connections: [], messageHistory: [], selectedConnectionId: null };
+    }
+  } catch (error) {
+    console.error('Error loading storage from API:', error);
+    storageCache = { connections: [], messageHistory: [], selectedConnectionId: null };
+  }
+}
+
+// Save storage to file-based API
+async function saveStorage() {
+  if (!storageCache) return;
+
+  try {
+    await fetch(STORAGE_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(storageCache)
+    });
+  } catch (error) {
+    console.error('Error saving storage to API:', error);
+  }
+}
+
+// Ensure storage is loaded
+async function ensureLoaded() {
+  if (!storageCache) {
+    await loadStorage();
+    // Try to migrate from localStorage if file storage is empty
+    await migrateLegacyStorage();
+  }
+}
+
+// Migrate from legacy localStorage to file-based storage
+async function migrateLegacyStorage() {
+  try {
+    // Check if we need to migrate
+    if (!storageCache ||
+        (storageCache.connections.length > 0 || storageCache.messageHistory.length > 0)) {
+      // Already has data, skip migration
+      return;
+    }
+
+    // Try to read from localStorage
+    const legacyConnections = localStorage.getItem('servicebus_connections');
+    const legacyMessages = localStorage.getItem('servicebus_message_history');
+    const legacySelected = localStorage.getItem('servicebus_selected_connection');
+
+    let migrated = false;
+
+    if (legacyConnections) {
+      const connections = JSON.parse(legacyConnections);
+      if (connections.length > 0) {
+        storageCache.connections = connections;
+        migrated = true;
+        console.log(`Migrated ${connections.length} connections from localStorage`);
+      }
+    }
+
+    if (legacyMessages) {
+      const messages = JSON.parse(legacyMessages);
+      if (messages.length > 0) {
+        storageCache.messageHistory = messages;
+        migrated = true;
+        console.log(`Migrated ${messages.length} messages from localStorage`);
+      }
+    }
+
+    if (legacySelected) {
+      storageCache.selectedConnectionId = legacySelected;
+      migrated = true;
+    }
+
+    if (migrated) {
+      await saveStorage();
+      console.log('Migration completed successfully');
+    }
+  } catch (error) {
+    console.error('Error during migration from localStorage:', error);
+  }
+}
 
 export const StorageManager = {
   // Connection String Management
-  getConnections(): ConnectionString[] {
-    try {
-      const stored = localStorage.getItem(CONNECTIONS_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch (error) {
-      console.error('Error reading connections from storage:', error);
-      return [];
+  async getConnections(): Promise<ConnectionString[]> {
+    await ensureLoaded();
+    return storageCache?.connections || [];
+  },
+
+  async saveConnection(connection: ConnectionString): Promise<void> {
+    await ensureLoaded();
+    if (!storageCache) return;
+
+    const existingIndex = storageCache.connections.findIndex(c => c.id === connection.id);
+
+    if (existingIndex >= 0) {
+      storageCache.connections[existingIndex] = connection;
+    } else {
+      storageCache.connections.push(connection);
     }
+
+    await saveStorage();
   },
 
-  saveConnection(connection: ConnectionString): void {
-    try {
-      const connections = this.getConnections();
-      const existingIndex = connections.findIndex(c => c.id === connection.id);
+  async deleteConnection(id: string): Promise<void> {
+    await ensureLoaded();
+    if (!storageCache) return;
 
-      if (existingIndex >= 0) {
-        connections[existingIndex] = connection;
-      } else {
-        connections.push(connection);
-      }
-
-      localStorage.setItem(CONNECTIONS_KEY, JSON.stringify(connections));
-    } catch (error) {
-      console.error('Error saving connection to storage:', error);
-    }
+    storageCache.connections = storageCache.connections.filter(c => c.id !== id);
+    await saveStorage();
   },
 
-  deleteConnection(id: string): void {
-    try {
-      const connections = this.getConnections();
-      const filtered = connections.filter(c => c.id !== id);
-      localStorage.setItem(CONNECTIONS_KEY, JSON.stringify(filtered));
-    } catch (error) {
-      console.error('Error deleting connection from storage:', error);
-    }
+  async getSelectedConnectionId(): Promise<string | null> {
+    await ensureLoaded();
+    return storageCache?.selectedConnectionId || null;
   },
 
-  getSelectedConnectionId(): string | null {
-    return localStorage.getItem(SELECTED_CONNECTION_KEY);
-  },
+  async setSelectedConnectionId(id: string): Promise<void> {
+    await ensureLoaded();
+    if (!storageCache) return;
 
-  setSelectedConnectionId(id: string): void {
-    localStorage.setItem(SELECTED_CONNECTION_KEY, id);
+    storageCache.selectedConnectionId = id;
+    await saveStorage();
   },
 
   // Message History Management
-  getMessageHistory(): Message[] {
-    try {
-      const stored = localStorage.getItem(MESSAGE_HISTORY_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch (error) {
-      console.error('Error reading message history from storage:', error);
-      return [];
-    }
+  async getMessageHistory(): Promise<Message[]> {
+    await ensureLoaded();
+    return storageCache?.messageHistory || [];
   },
 
-  getLastMessageForDestination(destination: string, destinationType: 'queue' | 'topic'): Message | undefined {
+  async getLastMessageForDestination(destination: string, destinationType: 'queue' | 'topic'): Promise<Message | undefined> {
     try {
-      const history = this.getMessageHistory();
+      const history = await this.getMessageHistory();
       return history.find(
         msg => msg.destination === destination && msg.destinationType === destinationType
       );
@@ -74,44 +159,50 @@ export const StorageManager = {
     }
   },
 
-  saveMessage(message: Message): void {
-    try {
-      const history = this.getMessageHistory();
-      history.unshift(message); // Add to beginning
+  async saveMessage(message: Message): Promise<void> {
+    await ensureLoaded();
+    if (!storageCache) return;
 
-      // Keep only last 1000 messages
-      const trimmed = history.slice(0, 1000);
+    storageCache.messageHistory.unshift(message); // Add to beginning
 
-      localStorage.setItem(MESSAGE_HISTORY_KEY, JSON.stringify(trimmed));
-    } catch (error) {
-      console.error('Error saving message to history:', error);
-    }
+    // Keep only last 1000 messages
+    storageCache.messageHistory = storageCache.messageHistory.slice(0, 1000);
+
+    await saveStorage();
   },
 
-  clearMessageHistory(): void {
-    localStorage.removeItem(MESSAGE_HISTORY_KEY);
+  async clearMessageHistory(): Promise<void> {
+    await ensureLoaded();
+    if (!storageCache) return;
+
+    storageCache.messageHistory = [];
+    await saveStorage();
   },
 
   // Export/Import
-  exportData(): string {
+  async exportData(): Promise<string> {
+    await ensureLoaded();
     return JSON.stringify({
-      connections: this.getConnections(),
-      messageHistory: this.getMessageHistory(),
+      connections: storageCache?.connections || [],
+      messageHistory: storageCache?.messageHistory || [],
     }, null, 2);
   },
 
-  importData(jsonData: string): boolean {
+  async importData(jsonData: string): Promise<boolean> {
     try {
       const data = JSON.parse(jsonData);
+      await ensureLoaded();
+      if (!storageCache) return false;
 
       if (data.connections) {
-        localStorage.setItem(CONNECTIONS_KEY, JSON.stringify(data.connections));
+        storageCache.connections = data.connections;
       }
 
       if (data.messageHistory) {
-        localStorage.setItem(MESSAGE_HISTORY_KEY, JSON.stringify(data.messageHistory));
+        storageCache.messageHistory = data.messageHistory;
       }
 
+      await saveStorage();
       return true;
     } catch (error) {
       console.error('Error importing data:', error);

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import type { Topic } from '../types';
+import type { Topic, Message, DeadLetterMessage } from '../types';
 import { ServiceBusAPI } from '../services/serviceBusApi';
 import { MessageModal } from './MessageModal';
+import { DeadLetterModal } from './DeadLetterModal';
 import { StorageManager } from '../utils/storage';
 import './ListView.css';
 
@@ -18,12 +19,24 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubscription, setSelectedSubscription] = useState<{ topicName: string; subscription: any; correlationFilter?: string } | null>(null);
   const [loadingCorrelationFilter, setLoadingCorrelationFilter] = useState(false);
+  const [previousMessage, setPreviousMessage] = useState<Message | undefined>(undefined);
+  const [deadLetterView, setDeadLetterView] = useState<{ topicName: string; subscriptionName: string } | null>(null);
+  const [deadLetterMessages, setDeadLetterMessages] = useState<DeadLetterMessage[]>([]);
+  const [loadingDeadLetters, setLoadingDeadLetters] = useState(false);
 
   useEffect(() => {
     if (api) {
       loadTopics();
     }
   }, [api]);
+
+  useEffect(() => {
+    const topicName = selectedTopic?.name || selectedSubscription?.topicName;
+    if (topicName) {
+      StorageManager.getLastMessageForDestination(topicName, 'topic')
+        .then(msg => setPreviousMessage(msg));
+    }
+  }, [selectedTopic, selectedSubscription]);
 
   const loadTopics = async (forceRefresh = false) => {
     if (!api) return;
@@ -91,7 +104,7 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
     );
 
     // Save to history
-    StorageManager.saveMessage({
+    await StorageManager.saveMessage({
       id: Date.now().toString(),
       body,
       properties,
@@ -125,6 +138,62 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
       setSelectedSubscription({ topicName, subscription });
     } finally {
       setLoadingCorrelationFilter(false);
+    }
+  };
+
+  const handleDeadLetterClick = async (topicName: string, subscriptionName: string) => {
+    if (!api) return;
+
+    setDeadLetterView({ topicName, subscriptionName });
+    await loadDeadLetters(topicName, subscriptionName);
+  };
+
+  const loadDeadLetters = async (topicName: string, subscriptionName: string) => {
+    if (!api) return;
+
+    setLoadingDeadLetters(true);
+    try {
+      const messages = await api.getDeadLetterMessages(topicName, subscriptionName);
+      setDeadLetterMessages(messages);
+    } catch (error) {
+      console.error('Error loading dead letters:', error);
+      setDeadLetterMessages([]);
+    } finally {
+      setLoadingDeadLetters(false);
+    }
+  };
+
+  const handleResendDeadLetters = async (messages: DeadLetterMessage[]) => {
+    if (!api || !deadLetterView) return;
+
+    const { topicName } = deadLetterView;
+
+    for (const message of messages) {
+      try {
+        await api.sendMessageToTopic(
+          topicName,
+          message.body,
+          message.properties,
+          {
+            subject: message.subject,
+            contentType: message.contentType,
+            correlationId: message.correlationId,
+            messageId: message.messageId,
+          }
+        );
+      } catch (error) {
+        console.error('Error resending dead letter:', error);
+        throw error;
+      }
+    }
+
+    // Refresh dead letter list after resending
+    await loadDeadLetters(deadLetterView.topicName, deadLetterView.subscriptionName);
+  };
+
+  const handleRefreshDeadLetters = async () => {
+    if (deadLetterView) {
+      await loadDeadLetters(deadLetterView.topicName, deadLetterView.subscriptionName);
     }
   };
 
@@ -223,14 +292,23 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
                       <div className="subscription-content">
                         <span className="subscription-name">{sub.name}</span>
                       </div>
-                      <button
-                        className="subscription-send-btn"
-                        onClick={() => handleSubscriptionSendClick(topic.name, sub)}
-                        disabled={loadingCorrelationFilter}
-                        title="Send message to topic"
-                      >
-                        ✉️
-                      </button>
+                      <div className="subscription-buttons">
+                        <button
+                          className="subscription-action-btn"
+                          onClick={() => handleDeadLetterClick(topic.name, sub.name)}
+                          title="View dead letter queue"
+                        >
+                          ☠️
+                        </button>
+                        <button
+                          className="subscription-action-btn"
+                          onClick={() => handleSubscriptionSendClick(topic.name, sub)}
+                          disabled={loadingCorrelationFilter}
+                          title="Send message to topic"
+                        >
+                          ✉️
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}
@@ -257,12 +335,20 @@ export const TopicsView: React.FC<TopicsViewProps> = ({ api }) => {
           destinationType="topic"
           destinationName={selectedTopic?.name || selectedSubscription?.topicName || ''}
           correlationFilter={selectedSubscription?.correlationFilter}
-          previousMessage={
-            StorageManager.getLastMessageForDestination(
-              selectedTopic?.name || selectedSubscription?.topicName || '',
-              'topic'
-            )
-          }
+          previousMessage={previousMessage}
+        />
+      )}
+
+      {deadLetterView && (
+        <DeadLetterModal
+          isOpen={!!deadLetterView}
+          onClose={() => setDeadLetterView(null)}
+          messages={deadLetterMessages}
+          onResend={handleResendDeadLetters}
+          onRefresh={handleRefreshDeadLetters}
+          isLoading={loadingDeadLetters}
+          topicName={deadLetterView.topicName}
+          subscriptionName={deadLetterView.subscriptionName}
         />
       )}
     </div>

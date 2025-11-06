@@ -38,9 +38,9 @@ function App() {
     }
   }, [isLoaded, connections.length]);
 
-  const handleAddConnection = (connectionString: string, name: string) => {
-    const newConnection = addConnection(connectionString, name);
-    selectConnection(newConnection.id);
+  const handleAddConnection = async (connectionString: string, name: string) => {
+    const newConnection = await addConnection(connectionString, name);
+    await selectConnection(newConnection.id);
   };
 
   const handleEditConnection = (connection: ConnectionString) => {
@@ -48,13 +48,13 @@ function App() {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveConnection = (id: string, connectionString: string, name: string) => {
-    updateConnection(id, connectionString, name);
+  const handleSaveConnection = async (id: string, connectionString: string, name: string) => {
+    await updateConnection(id, connectionString, name);
   };
 
-  const handleImportConnection = (connectionString: string, name: string) => {
-    const newConnection = addConnection(connectionString, name);
-    selectConnection(newConnection.id);
+  const handleImportConnection = async (connectionString: string, name: string) => {
+    const newConnection = await addConnection(connectionString, name);
+    await selectConnection(newConnection.id);
   };
 
   return (

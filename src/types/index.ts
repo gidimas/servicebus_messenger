@@ -52,3 +52,16 @@ export interface ConnectionStatus {
   isConnected: boolean;
   lastChecked: number;
 }
+
+export interface DeadLetterMessage {
+  sequenceNumber: string;
+  messageId?: string;
+  subject?: string;
+  contentType?: string;
+  correlationId?: string;
+  body: string;
+  properties: MessageProperty[];
+  enqueuedTime?: string;
+  deadLetterReason?: string;
+  deadLetterErrorDescription?: string;
+}

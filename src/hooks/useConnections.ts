@@ -16,18 +16,20 @@ export function useConnections() {
 
   // Load connections from storage on mount
   useEffect(() => {
-    const stored = StorageManager.getConnections();
-    setConnections(stored);
+    (async () => {
+      const stored = await StorageManager.getConnections();
+      setConnections(stored);
 
-    const selectedId = StorageManager.getSelectedConnectionId();
-    if (selectedId) {
-      const selected = stored.find(c => c.id === selectedId);
-      if (selected) {
-        setSelectedConnection(selected);
+      const selectedId = await StorageManager.getSelectedConnectionId();
+      if (selectedId) {
+        const selected = stored.find(c => c.id === selectedId);
+        if (selected) {
+          setSelectedConnection(selected);
+        }
       }
-    }
 
-    setIsLoaded(true);
+      setIsLoaded(true);
+    })();
   }, []);
 
   // Test connection when selected connection changes
@@ -63,7 +65,7 @@ export function useConnections() {
     }
   }, []);
 
-  const addConnection = useCallback((connectionString: string, name: string) => {
+  const addConnection = useCallback(async (connectionString: string, name: string) => {
     const parsed = parseConnectionString(connectionString);
 
     if (!parsed) {
@@ -76,13 +78,13 @@ export function useConnections() {
       ...parsed,
     };
 
-    StorageManager.saveConnection(newConnection);
+    await StorageManager.saveConnection(newConnection);
     setConnections(prev => [...prev, newConnection]);
 
     return newConnection;
   }, []);
 
-  const updateConnection = useCallback((id: string, connectionString: string, name: string) => {
+  const updateConnection = useCallback(async (id: string, connectionString: string, name: string) => {
     const parsed = parseConnectionString(connectionString);
 
     if (!parsed) {
@@ -95,7 +97,7 @@ export function useConnections() {
       ...parsed,
     };
 
-    StorageManager.saveConnection(updatedConnection);
+    await StorageManager.saveConnection(updatedConnection);
     setConnections(prev => prev.map(c => c.id === id ? updatedConnection : c));
 
     if (selectedConnection?.id === id) {
@@ -103,8 +105,8 @@ export function useConnections() {
     }
   }, [selectedConnection]);
 
-  const deleteConnection = useCallback((id: string) => {
-    StorageManager.deleteConnection(id);
+  const deleteConnection = useCallback(async (id: string) => {
+    await StorageManager.deleteConnection(id);
     setConnections(prev => prev.filter(c => c.id !== id));
 
     if (selectedConnection?.id === id) {
@@ -113,11 +115,11 @@ export function useConnections() {
     }
   }, [selectedConnection]);
 
-  const selectConnection = useCallback((id: string) => {
+  const selectConnection = useCallback(async (id: string) => {
     const connection = connections.find(c => c.id === id);
     if (connection) {
       setSelectedConnection(connection);
-      StorageManager.setSelectedConnectionId(id);
+      await StorageManager.setSelectedConnectionId(id);
     }
   }, [connections]);
 

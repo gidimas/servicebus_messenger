@@ -20,8 +20,8 @@ export const MessageHistoryView: React.FC<MessageHistoryViewProps> = ({ api }) =
     loadMessages();
   }, []);
 
-  const loadMessages = () => {
-    const history = StorageManager.getMessageHistory();
+  const loadMessages = async () => {
+    const history = await StorageManager.getMessageHistory();
     setMessages(history);
   };
 
@@ -78,8 +78,8 @@ export const MessageHistoryView: React.FC<MessageHistoryViewProps> = ({ api }) =
         id: Date.now().toString(),
         sentAt: Date.now(),
       };
-      StorageManager.saveMessage(resentMessage);
-      loadMessages();
+      await StorageManager.saveMessage(resentMessage);
+      await loadMessages();
 
       setResendStatus(prev => ({ ...prev, [message.id]: 'success' }));
     } catch (error) {
@@ -94,10 +94,10 @@ export const MessageHistoryView: React.FC<MessageHistoryViewProps> = ({ api }) =
     }
   };
 
-  const handleClearHistory = () => {
+  const handleClearHistory = async () => {
     if (confirm('Are you sure you want to clear all message history?')) {
-      StorageManager.clearMessageHistory();
-      loadMessages();
+      await StorageManager.clearMessageHistory();
+      await loadMessages();
     }
   };
 
@@ -126,7 +126,7 @@ export const MessageHistoryView: React.FC<MessageHistoryViewProps> = ({ api }) =
     }
 
     // Save to history
-    StorageManager.saveMessage({
+    await StorageManager.saveMessage({
       id: Date.now().toString(),
       body,
       properties,
@@ -140,7 +140,7 @@ export const MessageHistoryView: React.FC<MessageHistoryViewProps> = ({ api }) =
       subscriptionName: editingMessage.subscriptionName,
     });
 
-    loadMessages();
+    await loadMessages();
     setEditingMessage(null);
   };
 

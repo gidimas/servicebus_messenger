@@ -1,8 +1,50 @@
 const http = require('http');
 const https = require('https');
 const { URL } = require('url');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
 const PORT = 3001;
+
+// Storage configuration
+const APP_DATA_DIR = path.join(os.homedir(), '.servicebus-messenger');
+const STORAGE_FILE = path.join(APP_DATA_DIR, 'data.json');
+
+// Ensure app data directory exists
+if (!fs.existsSync(APP_DATA_DIR)) {
+  fs.mkdirSync(APP_DATA_DIR, { recursive: true });
+}
+
+// Initialize storage file if it doesn't exist
+if (!fs.existsSync(STORAGE_FILE)) {
+  fs.writeFileSync(STORAGE_FILE, JSON.stringify({
+    connections: [],
+    messageHistory: [],
+    selectedConnectionId: null
+  }, null, 2));
+}
+
+// Storage functions
+function readStorage() {
+  try {
+    const data = fs.readFileSync(STORAGE_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Error reading storage:', error);
+    return { connections: [], messageHistory: [], selectedConnectionId: null };
+  }
+}
+
+function writeStorage(data) {
+  try {
+    fs.writeFileSync(STORAGE_FILE, JSON.stringify(data, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Error writing storage:', error);
+    return false;
+  }
+}
 
 const server = http.createServer((req, res) => {
   // Enable CORS
@@ -18,8 +60,38 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Extract target URL from query parameter
+  // Parse URL
   const urlParams = new URL(req.url, `http://localhost:${PORT}`);
+  const pathname = urlParams.pathname;
+
+  // Handle storage API endpoints
+  if (pathname === '/storage') {
+    if (req.method === 'GET') {
+      // Read storage
+      const data = readStorage();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(data));
+      return;
+    } else if (req.method === 'POST') {
+      // Write storage
+      let body = [];
+      req.on('data', chunk => body.push(chunk));
+      req.on('end', () => {
+        try {
+          const data = JSON.parse(Buffer.concat(body).toString());
+          const success = writeStorage(data);
+          res.writeHead(success ? 200 : 500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success }));
+        } catch (error) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+  }
+
+  // Extract target URL from query parameter for proxy requests
   const targetUrl = urlParams.searchParams.get('url');
 
   if (!targetUrl) {
