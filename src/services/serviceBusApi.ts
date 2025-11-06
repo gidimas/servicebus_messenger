@@ -55,12 +55,6 @@ export class ServiceBusAPI {
     }
   }
 
-  private sanitizeHeaderName(name: string): string {
-    // Remove or replace invalid characters for HTTP header names
-    // Valid characters: alphanumeric, -, and _
-    return name.replace(/[^a-zA-Z0-9\-_]/g, '-');
-  }
-
   private buildProxyUrl(targetUrl: string): string {
     return `${this.proxyUrl}?url=${encodeURIComponent(targetUrl)}`;
   }
@@ -281,16 +275,15 @@ export class ServiceBusAPI {
         headers['BrokerProperties'] = JSON.stringify(brokerProps);
       }
 
-      // Add custom properties as individual headers
+      // Add custom properties as individual headers with exact case preservation
       if (properties) {
         properties.forEach(prop => {
           const formattedValue = this.formatPropertyValue(prop.value, prop.type);
-          // Sanitize property key for use in header name
-          const sanitizedKey = this.sanitizeHeaderName(prop.key);
-          headers[sanitizedKey] = formattedValue;
+          // Use the exact property key as provided (case-sensitive)
+          headers[prop.key] = formattedValue;
           // Add type header for non-string types
           if (prop.type !== 'string') {
-            headers[`${sanitizedKey}-Type`] = this.getPropertyTypeHeader(prop.type);
+            headers[`${prop.key}-Type`] = this.getPropertyTypeHeader(prop.type);
           }
         });
       }
@@ -352,16 +345,15 @@ export class ServiceBusAPI {
         headers['BrokerProperties'] = JSON.stringify(brokerProps);
       }
 
-      // Add custom properties as individual headers
+      // Add custom properties as individual headers with exact case preservation
       if (properties) {
         properties.forEach(prop => {
           const formattedValue = this.formatPropertyValue(prop.value, prop.type);
-          // Sanitize property key for use in header name
-          const sanitizedKey = this.sanitizeHeaderName(prop.key);
-          headers[sanitizedKey] = formattedValue;
+          // Use the exact property key as provided (case-sensitive)
+          headers[prop.key] = formattedValue;
           // Add type header for non-string types
           if (prop.type !== 'string') {
-            headers[`${sanitizedKey}-Type`] = this.getPropertyTypeHeader(prop.type);
+            headers[`${prop.key}-Type`] = this.getPropertyTypeHeader(prop.type);
           }
         });
       }
@@ -467,14 +459,31 @@ export class ServiceBusAPI {
     try {
       const properties: MessageProperty[] = [];
 
+      // List of standard HTTP and Azure Service Bus headers to exclude
+      const excludedHeaders = new Set([
+        'authorization',
+        'brokerproperties',
+        'content-type',
+        'content-length',
+        'date',
+        'server',
+        'transfer-encoding',
+        'connection',
+        'keep-alive',
+        'cache-control',
+        'expires',
+        'pragma',
+        'x-ms-request-id',
+        'x-ms-version',
+        'strict-transport-security'
+      ]);
+
       // Parse custom properties from headers
+      // Only include headers that are NOT standard HTTP/Service Bus headers
       headers.forEach((value, key) => {
-        if (!key.startsWith('broker') &&
-            !key.startsWith('content') &&
-            !key.startsWith('authorization') &&
-            key !== 'date' &&
-            key !== 'server' &&
-            key !== 'transfer-encoding') {
+        const lowerKey = key.toLowerCase();
+        // Skip if it's a standard header, or ends with -type (our type annotation headers)
+        if (!excludedHeaders.has(lowerKey) && !lowerKey.endsWith('-type')) {
           properties.push({
             key,
             value,

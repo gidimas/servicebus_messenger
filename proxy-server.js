@@ -122,11 +122,24 @@ const server = http.createServer((req, res) => {
       };
 
       // Copy relevant headers (exclude host and origin)
-      Object.keys(req.headers).forEach(key => {
-        if (!['host', 'origin', 'referer', 'connection'].includes(key.toLowerCase())) {
-          options.headers[key] = req.headers[key];
+      // Use rawHeaders to preserve original case for Azure Service Bus custom properties
+      const excludeHeaders = ['host', 'origin', 'referer', 'connection'];
+      if (req.rawHeaders) {
+        for (let i = 0; i < req.rawHeaders.length; i += 2) {
+          const headerName = req.rawHeaders[i];
+          const headerValue = req.rawHeaders[i + 1];
+          if (!excludeHeaders.includes(headerName.toLowerCase())) {
+            options.headers[headerName] = headerValue;
+          }
         }
-      });
+      } else {
+        // Fallback to regular headers if rawHeaders not available
+        Object.keys(req.headers).forEach(key => {
+          if (!excludeHeaders.includes(key.toLowerCase())) {
+            options.headers[key] = req.headers[key];
+          }
+        });
+      }
 
       // Make the proxied request
       const proxyReq = https.request(options, proxyRes => {
