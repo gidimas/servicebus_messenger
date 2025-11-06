@@ -51,7 +51,7 @@ jobs:
           cp -r dist release/
           cp standalone-server.js release/
           cp package.json release/
-          cp RUN.ps1 release/
+          cp run.ps1 release/
           echo "Azure Service Bus Messenger v${{ steps.package-version.outputs.version }}" > release/README.txt
           echo "" >> release/README.txt
           echo "How to Run:" >> release/README.txt
