@@ -62,48 +62,71 @@ jobs:
           SIZE=$(ls -lh ServiceBusMessenger.exe | awk '{print $5}')
           echo "size=$SIZE" >> $GITHUB_OUTPUT
 
+      - name: Create ZIP archive
+        if: steps.check-release.outputs.exists == 'false'
+        shell: bash
+        run: |
+          mkdir -p release
+          cp ServiceBusMessenger.exe release/
+          echo "Azure Service Bus Messenger v${{ steps.package-version.outputs.version }}" > release/README.txt
+          echo "" >> release/README.txt
+          echo "How to Use:" >> release/README.txt
+          echo "1. Extract this ZIP file" >> release/README.txt
+          echo "2. Double-click ServiceBusMessenger.exe" >> release/README.txt
+          echo "3. Browser opens automatically" >> release/README.txt
+          echo "" >> release/README.txt
+          echo "If Windows blocks the exe:" >> release/README.txt
+          echo "- Right-click ServiceBusMessenger.exe" >> release/README.txt
+          echo "- Select Properties" >> release/README.txt
+          echo "- Check 'Unblock' at the bottom" >> release/README.txt
+          echo "- Click Apply and OK" >> release/README.txt
+          cd release
+          7z a ../ServiceBusMessenger-v${{ steps.package-version.outputs.version }}.zip *
+          cd ..
+
       - name: Generate release notes
         if: steps.check-release.outputs.exists == 'false'
         id: release-notes
         shell: bash
         run: |
           echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "## 🚀 Azure Service Bus Messenger v${{ steps.package-version.outputs.version }}" >> $GITHUB_OUTPUT
+          echo "## Azure Service Bus Messenger v${{ steps.package-version.outputs.version }}" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          echo "### 📦 What's New" >> $GITHUB_OUTPUT
-          echo "**Single Executable Release** - No installation required!" >> $GITHUB_OUTPUT
+          echo "### What's New" >> $GITHUB_OUTPUT
+          echo "Single executable release - No installation required" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          echo "### ✨ Features" >> $GITHUB_OUTPUT
-          echo "- 💀 Dead Letter Queue viewer with bulk resend capability" >> $GITHUB_OUTPUT
-          echo "- 📝 Persistent message history (file-based storage)" >> $GITHUB_OUTPUT
-          echo "- 🔐 Connection management with SAS token generation" >> $GITHUB_OUTPUT
-          echo "- ✉️ Send messages to queues and topics" >> $GITHUB_OUTPUT
-          echo "- 📋 Message templates and property management" >> $GITHUB_OUTPUT
+          echo "### Features" >> $GITHUB_OUTPUT
+          echo "- Dead Letter Queue viewer with bulk resend capability" >> $GITHUB_OUTPUT
+          echo "- Persistent message history (file-based storage)" >> $GITHUB_OUTPUT
+          echo "- Connection management with SAS token generation" >> $GITHUB_OUTPUT
+          echo "- Send messages to queues and topics" >> $GITHUB_OUTPUT
+          echo "- Message templates and property management" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          echo "### 🎯 How to Use" >> $GITHUB_OUTPUT
-          echo "1. Download **ServiceBusMessenger.exe** (~50-70MB)" >> $GITHUB_OUTPUT
-          echo "2. Double-click to run" >> $GITHUB_OUTPUT
-          echo "3. Browser opens automatically" >> $GITHUB_OUTPUT
-          echo "4. That's it! No installation needed." >> $GITHUB_OUTPUT
+          echo "### How to Use" >> $GITHUB_OUTPUT
+          echo "1. Download the ZIP file" >> $GITHUB_OUTPUT
+          echo "2. Extract to a folder" >> $GITHUB_OUTPUT
+          echo "3. Right-click ServiceBusMessenger.exe > Properties > Check 'Unblock' > Apply" >> $GITHUB_OUTPUT
+          echo "4. Double-click ServiceBusMessenger.exe" >> $GITHUB_OUTPUT
+          echo "5. Browser opens automatically" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          echo "### 💾 Data Storage" >> $GITHUB_OUTPUT
-          echo "Your connections and message history are stored in:" >> $GITHUB_OUTPUT
-          echo "\`%USERPROFILE%\\.servicebus-messenger\\data.json\`" >> $GITHUB_OUTPUT
+          echo "### Windows SmartScreen Warning" >> $GITHUB_OUTPUT
+          echo "Windows may show a warning because the exe is not code-signed." >> $GITHUB_OUTPUT
+          echo "To run anyway: Click 'More info' then 'Run anyway'" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          echo "### 📊 File Information" >> $GITHUB_OUTPUT
-          echo "- **Size:** ${{ steps.filesize.outputs.size }}" >> $GITHUB_OUTPUT
-          echo "- **Format:** Single Windows executable" >> $GITHUB_OUTPUT
-          echo "- **Requirements:** Windows 10/11 (64-bit)" >> $GITHUB_OUTPUT
-          echo "- **Node.js Required:** ❌ No - everything is bundled!" >> $GITHUB_OUTPUT
+          echo "### Data Storage" >> $GITHUB_OUTPUT
+          echo "Connections and message history stored in: %USERPROFILE%\\.servicebus-messenger\\data.json" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          echo "### 🔄 Latest Changes" >> $GITHUB_OUTPUT
+          echo "### File Information" >> $GITHUB_OUTPUT
+          echo "- Size: ${{ steps.filesize.outputs.size }}" >> $GITHUB_OUTPUT
+          echo "- Format: Windows executable (64-bit)" >> $GITHUB_OUTPUT
+          echo "- Requirements: Windows 10/11" >> $GITHUB_OUTPUT
+          echo "- Node.js Required: No - everything is bundled" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### Latest Changes" >> $GITHUB_OUTPUT
           echo "\`\`\`" >> $GITHUB_OUTPUT
           git log -1 --pretty=format:"%s" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
           echo "\`\`\`" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
-          echo "---" >> $GITHUB_OUTPUT
-          echo "Built with ❤️ using Bun and Claude Code" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
@@ -111,9 +134,9 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.package-version.outputs.version }}
-          name: 🚀 v${{ steps.package-version.outputs.version }}
+          name: v${{ steps.package-version.outputs.version }}
           body: ${{ steps.release-notes.outputs.notes }}
-          files: ServiceBusMessenger.exe
+          files: ServiceBusMessenger-v${{ steps.package-version.outputs.version }}.zip
           draft: false
           prerelease: false
         env:
