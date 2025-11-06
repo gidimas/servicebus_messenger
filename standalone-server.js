@@ -6,8 +6,26 @@ const path = require('path');
 const os = require('os');
 const { exec } = require('child_process');
 
-const HTTP_PORT = 3001;
-const WEB_PORT = 5000;
+let HTTP_PORT = 3001;
+let WEB_PORT = 5000;
+
+// Function to find available port
+function findAvailablePort(startPort, callback) {
+  const server = http.createServer();
+
+  server.listen(startPort, () => {
+    const port = server.address().port;
+    server.close(() => callback(port));
+  });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      findAvailablePort(startPort + 1, callback);
+    } else {
+      callback(null);
+    }
+  });
+}
 
 // Storage configuration
 const APP_DATA_DIR = path.join(os.homedir(), '.servicebus-messenger');
@@ -218,31 +236,61 @@ const webServer = http.createServer((req, res) => {
   });
 });
 
-// Start servers
-proxyServer.listen(HTTP_PORT, () => {
-  console.log('========================================');
-  console.log('   Azure Service Bus Messenger');
-  console.log('========================================');
-  console.log('');
-  console.log(`[OK] Proxy server running on http://localhost:${HTTP_PORT}`);
-});
+// Start servers with port detection
+findAvailablePort(HTTP_PORT, (proxyPort) => {
+  if (!proxyPort) {
+    console.error('Failed to find available port for proxy server');
+    process.exit(1);
+  }
+  HTTP_PORT = proxyPort;
 
-webServer.listen(WEB_PORT, () => {
-  console.log(`[OK] Web server running on http://localhost:${WEB_PORT}`);
-  console.log('');
-  console.log('Opening browser...');
-  console.log('');
-  console.log('Press Ctrl+C to stop');
-  console.log('========================================');
-
-  // Open browser
-  const url = `http://localhost:${WEB_PORT}`;
-  const platform = process.platform;
-  const cmd = platform === 'win32' ? 'start' : platform === 'darwin' ? 'open' : 'xdg-open';
-  exec(`${cmd} ${url}`, (error) => {
-    if (error) {
-      console.log(`\nManually open: ${url}`);
+  findAvailablePort(WEB_PORT, (webPort) => {
+    if (!webPort) {
+      console.error('Failed to find available port for web server');
+      process.exit(1);
     }
+    WEB_PORT = webPort;
+
+    // Start proxy server
+    proxyServer.listen(HTTP_PORT, () => {
+      console.log('========================================');
+      console.log('   Azure Service Bus Messenger');
+      console.log('========================================');
+      console.log('');
+      console.log(`[OK] Proxy server running on http://localhost:${HTTP_PORT}`);
+    });
+
+    // Start web server
+    webServer.listen(WEB_PORT, () => {
+      console.log(`[OK] Web server running on http://localhost:${WEB_PORT}`);
+      console.log('');
+      console.log('Opening browser...');
+      console.log('');
+      console.log('Press ANY KEY to stop');
+      console.log('========================================');
+
+      // Open browser
+      const url = `http://localhost:${WEB_PORT}`;
+      const platform = process.platform;
+      const cmd = platform === 'win32' ? 'start' : platform === 'darwin' ? 'open' : 'xdg-open';
+      exec(`${cmd} ${url}`, (error) => {
+        if (error) {
+          console.log(`\nManually open: ${url}`);
+        }
+      });
+
+      // Wait for any key press to exit
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(true);
+        process.stdin.resume();
+        process.stdin.on('data', () => {
+          console.log('\n\nShutting down servers...');
+          proxyServer.close();
+          webServer.close();
+          process.exit(0);
+        });
+      }
+    });
   });
 });
 
