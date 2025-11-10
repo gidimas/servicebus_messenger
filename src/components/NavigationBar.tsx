@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ConnectionString, ConnectionStatus } from '../types';
 import { ConfirmModal } from './ConfirmModal';
 import './NavigationBar.css';
@@ -30,6 +30,21 @@ export const NavigationBar: React.FC<NavigationBarProps> = ({
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<ConnectionString | null>(null);
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    // Default to dark mode if no preference is saved
+    return saved ? saved === 'dark' : true;
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDark]);
 
   const handleDeleteClick = (connection: ConnectionString) => {
     setConfirmDelete(connection);
@@ -74,6 +89,13 @@ export const NavigationBar: React.FC<NavigationBarProps> = ({
 
       <div className="nav-right">
         <div className="connection-selector">
+          <button
+            className="theme-toggle"
+            onClick={() => setIsDark(!isDark)}
+            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {isDark ? '☀️' : '🌙'}
+          </button>
           <div
             className={`status-indicator ${connectionStatus.isConnected ? 'connected' : 'disconnected'}`}
             title={connectionStatus.isConnected ? 'Connected' : 'Disconnected'}

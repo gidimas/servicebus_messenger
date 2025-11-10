@@ -1,11 +1,11 @@
 .app {
   min-height: 100vh;
-  background: #f3f4f6;
   display: flex;
   flex-direction: column;
+  background: var(--bg-tertiary);
 }
 
 .main-content {
   flex: 1;
-  background: #f3f4f6;
+  background: var(--bg-tertiary);
 }

@@ -4,9 +4,10 @@
   justify-content: space-between;
   padding: 0 2rem;
   height: 64px;
-  background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  color: white;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .nav-left {
@@ -16,7 +17,11 @@
 .nav-title {
   margin: 0;
   font-size: 1.5rem;
-  font-weight: 600;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .nav-center {
@@ -27,25 +32,45 @@
 }
 
 .nav-button {
-  padding: 0.5rem 1.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  border-radius: 6px;
+  padding: 0.625rem 1.75rem;
+  background: var(--bg-primary);
+  border: 2px solid transparent;
+  color: var(--text-secondary);
+  border-radius: 10px;
   cursor: pointer;
   font-size: 0.95rem;
-  font-weight: 500;
-  transition: all 0.2s;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: -1;
+}
+
+.nav-button:hover:not(:disabled)::before {
+  opacity: 0.1;
 }
 
 .nav-button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .nav-button.active {
-  background: rgba(255, 255, 255, 0.25);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: white;
+  box-shadow: var(--shadow-md);
 }
 
 .nav-button:disabled {
@@ -88,12 +113,13 @@
 
 .dropdown-button {
   padding: 0.5rem 1rem;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  border-radius: 6px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 8px;
   cursor: pointer;
   font-size: 0.95rem;
+  font-weight: 500;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -103,7 +129,8 @@
 }
 
 .dropdown-button:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--bg-primary);
+  border-color: var(--primary);
 }
 
 .dropdown-arrow {
@@ -115,9 +142,10 @@
   position: absolute;
   top: calc(100% + 0.5rem);
   right: 0;
-  background: white;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   min-width: 250px;
   max-height: 400px;
   overflow-y: auto;
@@ -141,7 +169,7 @@
   padding: 0.75rem 1rem;
   border: none;
   background: none;
-  color: #374151;
+  color: var(--text-secondary);
   text-align: left;
   cursor: pointer;
   font-size: 0.95rem;
@@ -149,11 +177,11 @@
 }
 
 .dropdown-item:hover:not(.disabled) {
-  background: #f3f4f6;
+  background: var(--bg-secondary);
 }
 
 .dropdown-item.disabled {
-  color: #9ca3af;
+  color: var(--text-tertiary);
   cursor: default;
 }
 
@@ -166,11 +194,11 @@
 }
 
 .dropdown-item-wrapper:hover {
-  background: #f3f4f6;
+  background: var(--bg-secondary);
 }
 
 .dropdown-item-wrapper.selected {
-  background: #e1f0ff;
+  background: var(--bg-tertiary);
 }
 
 .dropdown-item-main {
@@ -178,14 +206,14 @@
   padding: 0.25rem 0.5rem;
   border: none;
   background: none;
-  color: #374151;
+  color: var(--text-secondary);
   text-align: left;
   cursor: pointer;
   font-size: 0.95rem;
 }
 
 .dropdown-item-wrapper.selected .dropdown-item-main {
-  color: #0078d4;
+  color: var(--primary);
   font-weight: 500;
 }
 
@@ -226,6 +254,29 @@
 
 .dropdown-divider {
   height: 1px;
-  background: #e5e7eb;
+  background: var(--border-color);
   margin: 0.5rem 0;
+}
+
+.theme-toggle {
+  padding: 0.5rem;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  transition: all 0.2s;
+  margin-left: 0.75rem;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-primary);
+  border-color: var(--primary);
+  transform: rotate(20deg);
 }

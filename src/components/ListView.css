@@ -14,7 +14,8 @@
 .list-header h2 {
   margin: 0;
   font-size: 1.75rem;
-  color: #1f2937;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .search-container {
@@ -23,17 +24,23 @@
 
 .search-input {
   width: 100%;
-  padding: 0.75rem 1rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
   font-size: 1rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   transition: all 0.2s;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #0078d4;
-  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.search-input::placeholder {
+  color: var(--text-tertiary);
 }
 
 .list-grid {
@@ -43,22 +50,22 @@
 }
 
 .list-card {
-  background: white;
+  background: var(--bg-primary);
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow);
   overflow: hidden;
   transition: all 0.2s;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
 }
 
 .list-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }
 
 .card-header {
   padding: 1.25rem;
-  background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
   color: white;
   display: flex;
   justify-content: space-between;
